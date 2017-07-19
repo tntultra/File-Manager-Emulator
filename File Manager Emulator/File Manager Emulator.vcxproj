@@ -145,6 +145,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CommandFactory.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="File Manager Emulator.cpp" />
     <ClCompile Include="stdafx.cpp">

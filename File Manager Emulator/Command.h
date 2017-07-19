@@ -1,23 +1,20 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <vector>
 
 //abstract class, interface
 class tCommand
 {
+	//virtual std::unique_ptr<tCommand> createImpl(const std::vector<std::string>& parsedString) const = 0;
 	virtual void executeImpl() const = 0;
-	//possible undo etc
-	//virtual void undoImpl () const = 0;
-	
+
 public:
 	virtual ~tCommand() = default;
 
-	//you dont want to move command
-	
-	//possible clone
-	//std::unique_ptr<tCommand> clone () const;
 	void execute() const
 	{
 		return executeImpl();
 	}
+
 };
