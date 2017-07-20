@@ -2,11 +2,13 @@
 
 #include "Command.h"
 
+#include <vector>
+#include <string>
+
+struct tCommandImpl;
+
 class tMoveCommand : public tCommand
 {
-	struct tMoveCommandImpl;
-	uptr<tMoveCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tMoveCommand(const std::vector<std::string>& parsedString);
@@ -15,9 +17,6 @@ public:
 
 class tCopyCommand : public tCommand
 {
-	struct tCopyCommandImpl;
-	uptr<tCopyCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tCopyCommand(const std::vector<std::string>& parsedString);
@@ -26,9 +25,6 @@ public:
 
 class tDelCommand : public tCommand
 {
-	struct tDelCommandImpl;
-	uptr<tDelCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tDelCommand(const std::vector<std::string>& parsedString);
@@ -37,9 +33,6 @@ public:
 
 class tMakeDirCommand : public tCommand
 {
-	struct tMakeDirCommandImpl;
-	uptr<tMakeDirCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tMakeDirCommand(const std::vector<std::string>& parsedString);
@@ -48,9 +41,6 @@ public:
 
 class tChangeDirCommand : public tCommand
 {
-	struct tChangeDirCommandImpl;
-	uptr<tChangeDirCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tChangeDirCommand(const std::vector<std::string>& parsedString);
@@ -59,9 +49,6 @@ public:
 
 class tRemoveDirCommand : public tCommand
 {
-	struct tRemoveDirCommandImpl;
-	uptr<tRemoveDirCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tRemoveDirCommand(const std::vector<std::string>& parsedString);
@@ -69,9 +56,6 @@ public:
 
 class tRecursiveRemoveDirCommand : public tCommand
 {
-	struct tRecursiveRemoveDirCommandImpl;
-	uptr<tRecursiveRemoveDirCommandImpl> pImpl;
-
 	virtual void executeImpl() const override; 
 public:
 	explicit tRecursiveRemoveDirCommand(const std::vector<std::string>& parsedString);
@@ -80,9 +64,6 @@ public:
 
 class tMakeFileCommand : public tCommand
 {
-	struct tMakeFileCommandImpl;
-	uptr<tMakeFileCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tMakeFileCommand(const std::vector<std::string>& parsedString);
@@ -91,9 +72,6 @@ public:
 
 class tMakeHardLinkCommand : public tCommand
 {
-	struct tMakeHardLinkCommandImpl;
-	uptr<tMakeHardLinkCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tMakeHardLinkCommand(const std::vector<std::string>& parsedString);
@@ -102,11 +80,7 @@ public:
 
 class tMakeSoftLinkCommand : public tCommand
 {
-	struct tMakeSoftLinkCommandImpl;
-	uptr<tMakeSoftLinkCommandImpl> pImpl;
-
 	virtual void executeImpl() const override;
 public:
 	explicit tMakeSoftLinkCommand(const std::vector<std::string>& parsedString);
-
 };

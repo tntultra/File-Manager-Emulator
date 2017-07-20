@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "CommandFactory.h"
 #include "Commands.h"
-#include "Commands.h"
 
 std::unique_ptr<tCommand> tCommandFactory :: create_command(const std::string& newCommandText)
 {
