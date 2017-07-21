@@ -2,12 +2,20 @@
 
 #include <string>
 #include <memory>
+#include <vector>
+#include "FileTypes.h"
+#include "Dir.h"
 
 //model
 class tFileManager
 {
 	struct tFileManagerImpl;
 	std::unique_ptr<tFileManagerImpl> pImpl;
+	
+	std::shared_ptr<tDir> get_path_parent(const std::string& path);
+	std::shared_ptr<tDir> move_dir_to_path_location(const std::string& path);
+	bool path_represents_current_dir(const std::string& path);
+
 public:
 	void create_file(const std::string& path);
 	void create_dir(const std::string& path);
@@ -20,3 +28,6 @@ public:
 	void move(const std::string& source, const std::string& dest);
 	void copy(const std::string& source, const std::string& dest);
 };
+
+std::vector<std::string> split_path(const std::string& path);
+std::string get_name(const std::string& path);

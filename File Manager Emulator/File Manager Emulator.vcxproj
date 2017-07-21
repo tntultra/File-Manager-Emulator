@@ -141,6 +141,8 @@
     <ClInclude Include="Command.h" />
     <ClInclude Include="CommandFactory.h" />
     <ClInclude Include="Commands.h" />
+    <ClInclude Include="Dir.h" />
+    <ClInclude Include="File.h" />
     <ClInclude Include="FileBase.h" />
     <ClInclude Include="FileManager.h" />
     <ClInclude Include="FileTypes.h" />
@@ -152,6 +154,7 @@
     <ClCompile Include="CommandFactory.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="File Manager Emulator.cpp" />
+    <ClCompile Include="File.cpp" />
     <ClCompile Include="FileManager.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
