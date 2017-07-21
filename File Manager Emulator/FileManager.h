@@ -1,9 +1,13 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
+//model
 class tFileManager
 {
+	struct tFileManagerImpl;
+	std::unique_ptr<tFileManagerImpl> pImpl;
 public:
 	void create_file(const std::string& path);
 	void create_dir(const std::string& path);

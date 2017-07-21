@@ -8,7 +8,7 @@ struct tConcreteCommandFactory
 {
 		static std::unique_ptr<tCommand> create_concrete_command(const std::vector<std::string>& parsedString)
 		{
-			return std::unique_ptr<tCommand> (new COMMAND (parsedString));
+			return std::unique_ptr<tCommand>(new COMMAND{ parsedString });
 		}
 };
 

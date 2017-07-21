@@ -5,8 +5,6 @@
 #include <vector>
 #include <string>
 
-struct tCommandImpl;
-
 class tMoveCommand : public tCommand
 {
 	virtual void executeImpl() const override;

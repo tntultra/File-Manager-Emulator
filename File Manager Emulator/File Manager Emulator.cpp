@@ -2,10 +2,18 @@
 //
 
 #include "stdafx.h"
-
+#include "File.h"
+#include "CommandFactory.h"
 
 int main()
 {
-    return 0;
+	tFile batch{ "some_batch_file.bat" };
+	std::string command;
+	tFileManagerController Controller;
+	while (batch.get_command (&command)) {
+		Controller.process_command(tCommandFactory::create_command(command));
+	}
+	Controller.display_current_files();
+	return 0;
 }
 
