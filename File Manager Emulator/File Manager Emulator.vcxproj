@@ -153,9 +153,12 @@
     <ClCompile Include="Command.cpp" />
     <ClCompile Include="CommandFactory.cpp" />
     <ClCompile Include="Commands.cpp" />
+    <ClCompile Include="Dir.cpp" />
     <ClCompile Include="File Manager Emulator.cpp" />
     <ClCompile Include="File.cpp" />
+    <ClCompile Include="FileBase.cpp" />
     <ClCompile Include="FileManager.cpp" />
+    <ClCompile Include="FileTypes.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

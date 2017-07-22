@@ -12,9 +12,10 @@ class tFileManager
 	struct tFileManagerImpl;
 	std::unique_ptr<tFileManagerImpl> pImpl;
 	
-	std::shared_ptr<tDir> get_path_parent(const std::string& path);
-	std::shared_ptr<tDir> move_dir_to_path_location(const std::string& path);
+	tDir* get_path_parent(const std::string& path);
+	tDir* get_dir_by_path(const std::string& path);
 	bool path_represents_current_dir(const std::string& path);
+	tFileBase* get_file_by_path(const std::string& path);
 
 public:
 	void create_file(const std::string& path);
@@ -31,3 +32,4 @@ public:
 
 std::vector<std::string> split_path(const std::string& path);
 std::string get_name(const std::string& path);
+bool has_extension(const std::string& path);

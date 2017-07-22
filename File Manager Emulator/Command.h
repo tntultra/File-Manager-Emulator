@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "FileManager.h"
 
 struct tCommandImpl;
 
@@ -10,8 +11,12 @@ class tCommand
 {
 	virtual void executeImpl() const = 0;
 protected:
-	std::unique_ptr<tCommandImpl> pImpl;
+	tFileManager* Receiver;
+	std::string Name;
+	std::string Source;
+	std::string Dest;//should be optional
 public:
+	tCommand(const tFileManager* receiver, const std::vector<std::string>& parsedStr);
 	virtual ~tCommand() = default;
 
 	void execute() const
