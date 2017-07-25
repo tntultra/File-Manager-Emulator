@@ -7,13 +7,13 @@
 
 int main()
 {
-	tFile batch{ "some_batch_file.bat" };
+	/*tFile batch{ "some_batch_file.bat" };
 	std::string command;
 	tFileManagerController Controller;
 	while (batch.get_command (&command)) {
 		Controller.process_command(tCommandFactory::create_command(command));
 	}
-	Controller.display_current_files();
+	Controller.display_current_files();*/
 	return 0;
 }
 

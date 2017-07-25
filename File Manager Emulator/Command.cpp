@@ -3,7 +3,7 @@
 
 #include <string>
 
-tCommand :: tCommand(std::weak_ptr<tFileManager> receiver, const std::vector<std::string>& parsedStr) :
+tCommand :: tCommand (const tFileManager* receiver, const std::vector<std::string>& parsedStr) :
 	Receiver {receiver},
 	Name {parsedStr[0]},
 	Source{ parsedStr[1] },//this can throw, because this is unique situation

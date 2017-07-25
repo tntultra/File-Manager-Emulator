@@ -2,19 +2,31 @@
 #include "Command.h"
 
 #include <vector>
+#include <map>
+#include <functional>
+
 
 template <class COMMAND>
 struct tConcreteCommandFactory
 {
-		static std::unique_ptr<tCommand> create_concrete_command(const std::vector<std::string>& parsedString)
-		{
-			return std::unique_ptr<tCommand>(new COMMAND{ parsedString });
-		}
+	static std::unique_ptr<tCommand> create_concrete_command(tFileManager* receiver, const std::vector<std::string>& parsedString)
+	{
+		return std::unique_ptr<tCommand>(new COMMAND(receiver, parsedString ));
+	}
 };
 
-struct tCommandFactory
+//singleton
+class tCommandFactory
 {
-	enum class CommandType
+public:
+	tCommandFactory();
+	tCommandFactory(const tCommandFactory&) = delete;
+	tCommandFactory(tCommandFactory&&) = delete;
+	tCommandFactory& operator=(const tCommandFactory&) = delete;
+	tCommandFactory& operator=(tCommandFactory&&) = delete;
+	~tCommandFactory() = default;
+
+	/*enum class CommandType
 	{
 		MAKE_DIR, 
 		CHANGE_DIR, 
@@ -26,9 +38,13 @@ struct tCommandFactory
 		DEL, 
 		COPY, 
 		MOVE
-	};
-	static std::unique_ptr<tCommand> create_command(const std::string& newCommandText);
+	};*/
+
+	std::unique_ptr<tCommand> create_command(tFileManager* receiver, const std::string& newCommandText);
+
+private:
+	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, const std::vector<std::string>&)>;
+	std::map<std::string, funcPtr> TypesByName;
 };
 
 std::vector<std::string> parse_command_text(const std::string& newCommandText);
-tCommandFactory::CommandType command_type_by_name(const std::string& name);

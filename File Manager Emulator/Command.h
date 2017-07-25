@@ -11,7 +11,7 @@ class tCommand
 {
 	virtual void executeImpl() const = 0;
 protected:
-	tFileManager* Receiver;
+	const tFileManager* Receiver;
 	std::string Name;
 	std::string Source;
 	std::string Dest;//should be optional
