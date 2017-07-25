@@ -4,6 +4,7 @@
 #include <set>
 #include <list>
 #include <algorithm>
+#include <queue>
 
 bool operator< (const tDir& lhs, const tDir& rhs) {
 	return lhs.Name < rhs.Name;
@@ -54,7 +55,19 @@ bool tDir::empty () const
 
 bool tDir::can_be_removed () const
 {
-	return true;
+	std::queue<const tDir*, std::list<const tDir*>> dirs;
+	dirs.push(this);
+	while (!dirs.empty()) {
+		auto dir = dirs.front();
+		dirs.pop();
+		if (dir-> hard_link_to_file_exists()) {
+			return true;
+		}
+		for (auto& childDir : dir-> Dirs) {
+			dirs.push(&childDir);
+		}
+	}
+	return false;
 }
 
 tDir* tDir::parent () const
@@ -74,13 +87,13 @@ tDir::F_IT tDir::internal_search_file_or_link(const std::string& fileName)
 		[&](auto&& file) { return file->name() == fileName; });
 }
 
-bool tDir::hard_link_to_file_exists (const std::string& fileName)
+bool tDir::hard_link_to_file_exists (const std::string& fileName) const
 {
 	return std::find_if(Files.begin(), Files.end(),
-		[&](auto&& f) { return f->get_type () == FILE_TYPE::HARD_LINK && f->name() == fileName; }) != Files.end();
+		[&](auto&& f) { return f->get_type () == FILE_TYPE::HARD_LINK && fileName[0] ? f->name() == fileName : true; }) != Files.end();
 }
 
-bool tDir::soft_link_to_file_exists(const std::string& fileName)
+bool tDir::soft_link_to_file_exists(const std::string& fileName) const
 {
 	return std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f) { return f->get_type() == FILE_TYPE::SOFT_LINK && f->name() == fileName; }) != Files.end();

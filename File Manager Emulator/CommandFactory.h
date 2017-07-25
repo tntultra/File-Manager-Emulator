@@ -2,9 +2,8 @@
 #include "Command.h"
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <functional>
-
 
 template <class COMMAND>
 struct tConcreteCommandFactory
@@ -44,7 +43,7 @@ public:
 
 private:
 	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, const std::vector<std::string>&)>;
-	std::map<std::string, funcPtr> TypesByName;
+	std::unordered_map<std::string, funcPtr> TypesByName;
 };
 
 std::vector<std::string> parse_command_text(const std::string& newCommandText);

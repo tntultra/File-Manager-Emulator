@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "FileManager.h"
-#include <list>
 #include "FileBase.h"
-#include "FileTypes.h"
 #include <queue>
 
 struct tFileManager::tFileManagerImpl
@@ -145,6 +143,8 @@ void tFileManager::move(const std::string& source, const std::string& dest) cons
 	if (!has_extension(source)) {//source is actually a directory -> move directory
 		auto existingDir = get_dir_by_path(source);
 		if (existingDir && dirToMoveInto) {
+			if (existingDir->can_be_removed())
+				throw std::runtime_error("moving directory with hardlink in it (or some of subdirectories)");
 			dirToMoveInto->insert_other_dir(std::move(*existingDir));
 			if (existingDir->parent())
 				existingDir->parent()->remove_dir(get_name(source));

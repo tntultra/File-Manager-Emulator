@@ -12,7 +12,6 @@ class tFileManager
 	struct tFileManagerImpl;
 	std::unique_ptr<tFileManagerImpl> pImpl;
 	
-	tDir* get_path_parent(const std::string& path) const;
 	tDir* get_dir_by_path(const std::string& path) const;
 	bool path_represents_current_dir(const std::string& path) const;
 	std::shared_ptr<tFileBase> get_file_by_path(const std::string& path) const;

@@ -18,9 +18,11 @@ class tDir
 	std::list<std::shared_ptr<tFileBase> > Files;
 
 	D_IT internal_search_dir(const std::string& dirName);//should return optional
+
 	F_IT internal_search_file_or_link(const std::string& fileName);
-	bool hard_link_to_file_exists(const std::string& fileName);
-	bool soft_link_to_file_exists(const std::string& fileName);
+
+	bool hard_link_to_file_exists(const std::string& fileName = "") const;//blank means any hardlink, special behavior for move operation
+	bool soft_link_to_file_exists(const std::string& fileName) const;
 
 public:
 	tDir(tDir* parent, const std::string& name);
