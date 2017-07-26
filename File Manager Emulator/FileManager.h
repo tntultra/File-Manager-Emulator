@@ -32,6 +32,7 @@ public:
 	void recursive_remove_dir(const std::string& path) const;
 	void create_hard_link(const std::string& source, const std::string& dest) const;
 	void create_soft_link(const std::string& source, const std::string& dest) const;
+	void remove_all_file_soft_links (const std::shared_ptr<tFileBase>& file) const;
 	void delete_file_or_link(const std::string& path) const;
 	void move(const std::string& source, const std::string& dest) const;
 	void copy(const std::string& source, const std::string& dest) const;

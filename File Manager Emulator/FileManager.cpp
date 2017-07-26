@@ -5,16 +5,16 @@
 
 struct tFileManager::tFileManagerImpl
 {
-	std::shared_ptr<tDir> BaseDir{nullptr, 'C' };//[Name:]
-	tDir* CurrentDir{ BaseDir.get () };
+	tDir BaseDir{nullptr, "C:" };//[Name:]
+	tDir* CurrentDir{ &BaseDir };
 };
 
-tDir* tFileManager::get_dir_by_path (const std::string& path) const
+tDir* tFileManager::get_dir_by_path(const std::string& path) const
 {
 	auto fullPath = split_path(path);
 	if (!fullPath.empty()) {
 		auto pathHasFullName = tome(fullPath.front());
-		auto startDir = pathHasFullName ? pImpl->BaseDir.get() : pImpl->CurrentDir;
+		const auto startDir = pathHasFullName ? &pImpl->BaseDir : pImpl->CurrentDir;
 		auto end = has_extension(path) ? fullPath.end() - 1 : fullPath.end();
 		for (auto it = pathHasFullName ? fullPath.begin() : fullPath.begin ()+1; startDir && it != end; ++it) {
 			startDir = startDir->get_dir_by_name(*it);
@@ -24,12 +24,12 @@ tDir* tFileManager::get_dir_by_path (const std::string& path) const
 	return nullptr;
 }
 
-bool tFileManager::path_represents_current_dir (const std::string& path) const
+bool tFileManager::path_represents_current_dir(const std::string& path) const
 {
 	return pImpl->CurrentDir-> path () == path;
 }
 
-std::shared_ptr<tFileBase> tFileManager::get_file_by_path (const std::string& path) const
+std::shared_ptr<tFileBase> tFileManager::get_file_by_path(const std::string& path) const
 {
 	if (!has_extension(path))
 		return nullptr;
@@ -55,7 +55,8 @@ void tFileManager::create_file(const std::string& path)const
 	auto dir = get_dir_by_path(path);
 	auto fileName = get_name(path);
 	if (dir) {
-		if (!dir->get_file_by_name(fileName))
+		auto file = dir->get_file_by_name(fileName);
+		if (!file)
 			dir->create_file(fileName);
 	}
 }
@@ -128,12 +129,37 @@ void tFileManager::create_soft_link(const std::string& source, const std::string
 	}
 }
 
+void tFileManager::remove_all_file_soft_links (const std::shared_ptr<tFileBase>& file) const
+{
+	std::queue<const tDir*> dirs;
+	dirs.push(&pImpl->BaseDir);
+	while (!dirs.empty()) {
+		auto someDir = dirs.front();
+		dirs.pop();
+		someDir-> get_file_or_link_by_file
+	}
+}
+
 //del
 void tFileManager::delete_file_or_link(const std::string& path) const
 {
 	auto dir = get_dir_by_path(path);
-	if (dir)
+	if (dir) {
+		auto file = dir->get_file_by_name(get_name(path));
+		if (file) {
+			auto ftype = file->get_type();
+			if ((ftype == FILE_TYPE::REGULAR_FILE && dynamic_cast<tFile*>(file.get())->has_hard_links())
+				|| ftype == FILE_TYPE::HARD_LINK) {
+				return;
+			}
+			//can remove only dynamic link or regular file without hardlinks
+			if (ftype == FILE_TYPE::REGULAR_FILE && dynamic_cast<tFile*>(file.get())->has_soft_links()) {
+				remove_all_file_soft_links(file);
+			}
+		}
+		//regular file without links or soft link -> simple remove from dir.
 		dir->remove_file(get_name(path));
+	}
 }
 
 //move
@@ -143,7 +169,7 @@ void tFileManager::move(const std::string& source, const std::string& dest) cons
 	if (!has_extension(source)) {//source is actually a directory -> move directory
 		auto existingDir = get_dir_by_path(source);
 		if (existingDir && dirToMoveInto) {
-			if (existingDir->can_be_removed())
+			if (!existingDir->can_be_removed())
 				throw std::runtime_error("moving directory with hardlink in it (or some of subdirectories)");
 			dirToMoveInto->insert_other_dir(std::move(*existingDir));
 			if (existingDir->parent())
@@ -178,7 +204,7 @@ void tFileManager::copy(const std::string& source, const std::string& dest) cons
 	}
 }
 
-std::vector<std::string> split_path (const std::string& path)
+std::vector<std::string> split_path(const std::string& path)
 {
 	const char slash = '\\';
 	std::vector<std::string> splits;
@@ -191,16 +217,20 @@ std::vector<std::string> split_path (const std::string& path)
 	return splits;
 }
 
-std::string get_name (const std::string& path)
+std::string get_name(const std::string& path)
 {
 	auto lastSlash = path.rfind('\\');
+	auto firstSqBracket = path.find('[');
 	if (lastSlash == std::string::npos) {
+		return path;
+	}
+	if (firstSqBracket != std::string::npos) {
 		return path;
 	}
 	return path.substr(lastSlash);
 }
 
-bool tome (const std::string& firstDir)
+bool tome(const std::string& firstDir)
 {
 	return firstDir.find(':') != std::string::npos;
 }

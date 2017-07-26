@@ -20,7 +20,7 @@ class tFileBase
 public:
 	virtual ~tFileBase() = default;
 	
-	FILE_TYPE get_type () const
+	FILE_TYPE get_type() const noexcept
 	{
 		return get_type_impl();
 	}
@@ -28,7 +28,7 @@ public:
 	std::string name() const noexcept {
 		return get_name_impl();
 	}
-	std::unique_ptr<tFileBase> clone () const
+	std::unique_ptr<tFileBase> clone() const
 	{
 		return clone_impl();
 	}
