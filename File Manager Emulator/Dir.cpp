@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <queue>
 
-bool operator< (const tDir& lhs, const tDir& rhs) {
+bool operator< (tDir& lhs, tDir& rhs) {
 	return lhs.Name < rhs.Name;
 }
 
@@ -27,13 +27,13 @@ tDir::tDir (const tDir& rhs) :
 	});
 }
 
-tDir& tDir::operator= (const tDir& rhs) {
+tDir& tDir::operator= (tDir& rhs) {
 	auto temp(rhs);
 	std::swap(*this, temp);
 	return *this;
 }
 
-std::string tDir::path () const
+std::string tDir::path ()
 {
 	auto parent = Parent;
 	auto path = name ();
@@ -43,19 +43,19 @@ std::string tDir::path () const
 	return path;
 }
 
-std::string tDir::name () const
+std::string tDir::name ()
 {
 	return Name;
 }
 
-bool tDir::empty () const
+bool tDir::empty ()
 {
 	return (Dirs.size() + Files.size() == 0);
 }
 
-bool tDir::can_be_removed () const
+bool tDir::can_be_removed ()
 {
-	std::queue<const tDir*> dirs;
+	std::queue<tDir*> dirs;
 	dirs.push(this);
 	while (!dirs.empty()) {
 		auto dir = dirs.front();
@@ -70,36 +70,36 @@ bool tDir::can_be_removed () const
 	return false;
 }
 
-tDir* tDir::parent () const
+tDir* tDir::parent ()
 {
 	return Parent;
 }
 
-tDir::D_CIT tDir::internal_search_dir (tDir::D_CIT start, tDir::D_CIT end, const std::string& dirName) const
+tDir::D_CIT tDir::internal_search_dir (tDir::D_CIT start, tDir::D_CIT end, const std::string& dirName)
 {
 	return std::find_if(start, end,
 		[&](auto&& dir) { return dir.name() == dirName; });
 }
 
-tDir::F_CIT tDir::internal_search_file_or_link(tDir::F_CIT start, tDir::F_CIT end, const std::string& fileName) const
+tDir::F_IT tDir::internal_search_file_or_link(tDir::F_IT start, tDir::F_IT end, const std::string& fileName)
 {
 	return std::find_if(start, end,
 		[&](auto&& file) { return file->name() == fileName; });
 }
 
-bool tDir::hard_link_to_file_exists (const std::string& fileName) const
+bool tDir::hard_link_to_file_exists (const std::string& fileName)
 {
 	return std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f) { return f->get_type () == FILE_TYPE::HARD_LINK && fileName[0] ? f->name() == fileName : true; }) != Files.end();
 }
 
-bool tDir::soft_link_to_file_exists(const std::string& fileName) const
+bool tDir::soft_link_to_file_exists(const std::string& fileName)
 {
 	return std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f) { return f->get_type() == FILE_TYPE::SOFT_LINK && f->name() == fileName; }) != Files.end();
 }
 
-const tDir* tDir::get_dir_by_name (const std::string& dirName) const
+tDir* tDir::get_dir_by_name (const std::string& dirName)
 {
 	auto it = internal_search_dir(Dirs.begin(), Dirs.end(), dirName);
 	if (it != Dirs.end()) {
@@ -108,23 +108,23 @@ const tDir* tDir::get_dir_by_name (const std::string& dirName) const
 	return nullptr;
 }
 
-std::shared_ptr<tFileBase> tDir::get_file_or_link_by_file (std::shared_ptr<tFileBase> file) const
+std::shared_ptr<tFileBase> tDir::get_file_or_link_by_file (std::shared_ptr<tFileBase> file)
 {
 	auto it = std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f)
 	{
-		if (f.get_type() == FILE_TYPE::REGULAR_FILE) {
+		if (f-> get_type() == FILE_TYPE::REGULAR_FILE) {
 			return f.get() == file.get();
-		} else if (f.get_type() == FILE_TYPE::SOFT_LINK){
+		} else if (f->get_type() == FILE_TYPE::SOFT_LINK){
 			auto wptrFile = dynamic_cast<tSoftLink*>(f.get())->File;
 			if (!wptrFile.expired()) {
-				return wptrFile.lock()->File.get() == file.get();
+				return wptrFile.lock().get() == file.get();
 			}
 			return false;
 		} else {
 			auto wptrFile = dynamic_cast<tHardLink*>(f.get())->File;
 			if (!wptrFile.expired()) {
-				return wptrFile.lock()->File.get() == file.get();
+				return wptrFile.lock().get() == file.get();
 			}
 			return false;
 		}
@@ -132,7 +132,7 @@ std::shared_ptr<tFileBase> tDir::get_file_or_link_by_file (std::shared_ptr<tFile
 	return (it != Files.end() ? *it : nullptr);
 }
 
-std::shared_ptr<tFileBase> tDir::get_file_by_name (const std::string& fileName) const
+std::shared_ptr<tFileBase> tDir::get_file_by_name (const std::string& fileName)
 {
 	auto it = internal_search_file_or_link(Files.begin(), Files.end(), fileName);
 	if (it != Files.end()) {
@@ -141,7 +141,7 @@ std::shared_ptr<tFileBase> tDir::get_file_by_name (const std::string& fileName) 
 	return nullptr;
 }
 
-std::vector<std::shared_ptr<tFileBase>> tDir::get_all_files_by_name(const std::string& fileName) const
+std::vector<std::shared_ptr<tFileBase>> tDir::get_all_files_by_name(const std::string& fileName)
 {
 	std::vector<std::shared_ptr<tFileBase>> result;
 	auto start = internal_search_file_or_link(Files.begin (), Files.end(), fileName);
@@ -213,7 +213,7 @@ void tDir::insert_other_dir (tDir&& dir)
 	//DirIndex[dir.name()] = &Dirs.back();
 }
 
-void tDir::insert_other_dir (const tDir& dir)
+void tDir::insert_other_dir (tDir& dir)
 {
 	Dirs.push_back(dir);
 	//DirIndex[dir.name()] = &Dirs.back();

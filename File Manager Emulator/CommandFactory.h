@@ -8,7 +8,7 @@
 template <class COMMAND>
 struct tConcreteCommandFactory
 {
-	static std::unique_ptr<tCommand> create_concrete_command(tFileManager* receiver, const std::vector<std::string>& parsedString)
+	static std::unique_ptr<tCommand> create_concrete_command(tFileManager* receiver, std::vector<std::string>& parsedString)
 	{
 		return std::unique_ptr<tCommand>(new COMMAND(receiver, parsedString ));
 	}
@@ -19,9 +19,9 @@ class tCommandFactory
 {
 public:
 	tCommandFactory();
-	tCommandFactory(const tCommandFactory&) = delete;
+	tCommandFactory(tCommandFactory&) = delete;
 	tCommandFactory(tCommandFactory&&) = delete;
-	tCommandFactory& operator=(const tCommandFactory&) = delete;
+	tCommandFactory& operator=(tCommandFactory&) = delete;
 	tCommandFactory& operator=(tCommandFactory&&) = delete;
 	~tCommandFactory() = default;
 
@@ -42,7 +42,7 @@ public:
 	std::unique_ptr<tCommand> create_command(tFileManager* receiver, const std::string& newCommandText);
 
 private:
-	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, const std::vector<std::string>&)>;
+	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, std::vector<std::string>&)>;
 	std::unordered_map<std::string, funcPtr> TypesByName;
 };
 

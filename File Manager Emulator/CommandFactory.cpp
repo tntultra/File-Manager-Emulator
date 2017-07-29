@@ -7,7 +7,11 @@ std::unique_ptr<tCommand> tCommandFactory :: create_command(tFileManager* receiv
 {
 	auto parsedString = parse_command_text(newCommandText);
 	if (parsedString.empty()) {
-		throw std::exception("cannot parse command");
+		throw std::runtime_error("cannot parse command");
+	}
+	auto comByNameIt = TypesByName.find(parsedString[0]);
+	if (comByNameIt == TypesByName.end()) {
+		throw std::runtime_error("command not supported");
 	}
 	return TypesByName[parsedString[0]](receiver, parsedString);
 }
@@ -30,13 +34,13 @@ tCommandFactory::tCommandFactory ()
 
 std::vector<std::string> parse_command_text (const std::string& newCommandText)
 {
-	const char ws = ' ';
+	const auto ws = ' ';
 	std::vector<std::string> splits;
 	size_t begin = 0, ws_pos;
+	while (begin < newCommandText.length() && newCommandText[begin] == ws)
+		++begin;
 	do {
-		while (begin < newCommandText.length () && newCommandText[begin] == ws) 
-			++begin;
-		ws_pos = newCommandText.find(ws);
+		ws_pos = newCommandText.find(ws, begin);
 		splits.push_back(newCommandText.substr(begin, ws_pos - begin));
 		begin = ws_pos + 1;
 		

@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "File.h"
 #include "CommandFactory.h"
+#include <fstream>
+#include "FileManagerController.h"
 
 int main()
 {
@@ -14,6 +16,11 @@ int main()
 		Controller.process_command(tCommandFactory::create_command(command));
 	}
 	Controller.display_current_files();*/
+
+	std::ifstream batch{ "E:\\fme_batch.bat" };
+	tFileManagerController Controller;
+	Controller.process_stream(&batch);
+
 	return 0;
 }
 

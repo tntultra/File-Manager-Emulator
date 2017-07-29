@@ -9,17 +9,27 @@ struct tCommandImpl;
 //abstract class, interface
 class tCommand
 {
-	virtual void executeImpl() const = 0;
+	struct tPath
+	{
+		bool IsHardLink = false;
+		bool IsSoftLink = false;
+		std::vector<std::string> Path;
+	};
+
+	virtual void executeImpl() = 0;
+	void split_path(tPath* path, const std::string& text);
 protected:
-	const tFileManager* Receiver;
+
+	tFileManager* Receiver;
 	std::string Name;
-	std::string Source;
-	std::string Dest;//should be optional
+	tPath Source;
+	tPath Dest;
+
 public:
-	tCommand(const tFileManager* receiver, const std::vector<std::string>& parsedStr);
+	tCommand(tFileManager* receiver, std::vector<std::string>& parsedStr);
 	virtual ~tCommand() = default;
 
-	void execute() const
+	void execute()
 	{
 		return executeImpl();
 	}

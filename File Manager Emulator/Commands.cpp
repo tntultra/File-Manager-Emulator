@@ -3,45 +3,45 @@
 #include "Commands.h"
 #include "FileManager.h"
 
-void tMoveCommand::executeImpl () const
+void tMoveCommand::executeImpl ()
 {
-	Receiver->move(Source, Dest);
+	Receiver->move(Source.Path, Dest.Path);
 }
 
-void tCopyCommand::executeImpl () const
+void tCopyCommand::executeImpl ()
 {
-	Receiver->copy(Source, Dest);
+	Receiver->copy(Source.Path, Dest.Path);
 }
-void tDelCommand::executeImpl () const
+void tDelCommand::executeImpl ()
 {
-	Receiver->delete_file_or_link(Source);
+	Receiver->delete_file_or_link(Source.Path);
 }
-void tMakeDirCommand::executeImpl () const
+void tMakeDirCommand::executeImpl ()
 {
-	Receiver->create_dir(Source);
+	Receiver->create_dir(Source.Path);
 }
-void tChangeDirCommand::executeImpl () const
+void tChangeDirCommand::executeImpl ()
 {
-	Receiver->change_dir(Source);
+	Receiver->change_dir(Source.Path);
 }
-void tRemoveDirCommand::executeImpl () const
+void tRemoveDirCommand::executeImpl ()
 {
-	Receiver->remove_dir(Source);
+	Receiver->remove_dir(Source.Path);
 }
-void tRecursiveRemoveDirCommand::executeImpl () const
+void tRecursiveRemoveDirCommand::executeImpl ()
 {
-	Receiver->recursive_remove_dir(Source);
+	Receiver->recursive_remove_dir(Source.Path);
 }
-void tMakeFileCommand::executeImpl () const
+void tMakeFileCommand::executeImpl ()
 {
-	Receiver->create_file(Source);
+	Receiver->create_file(Source.Path);
 }
-void tMakeSoftLinkCommand::executeImpl () const
+void tMakeSoftLinkCommand::executeImpl ()
 {
-	Receiver->create_soft_link(Source, Dest);
+	Receiver->create_soft_link(Source.Path, Dest.Path);
 }
 
-void tMakeHardLinkCommand::executeImpl () const
+void tMakeHardLinkCommand::executeImpl ()
 {
-	Receiver->create_hard_link(Source, Dest);
+	Receiver->create_hard_link(Source.Path, Dest.Path);
 }
