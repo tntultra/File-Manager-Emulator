@@ -12,25 +12,25 @@ std::unique_ptr<tCommand> tCommandFactory :: create_command(tFileManager* receiv
 	}
 	auto comByNameIt = TypesByName.find(parsedString[0]);
 	if (comByNameIt == TypesByName.end()) {
-		throw std::runtime_error("command not supported");
+		auto errMsg = "command not supported: " + parsedString[0];
+		throw std::runtime_error(errMsg.c_str());
 	}
 	return TypesByName[parsedString[0]](receiver, parsedString);
 }
 
 tCommandFactory::tCommandFactory ()
-	: TypesByName{
-		{ "MD", tConcreteCommandFactory<tMakeDirCommand>::create_concrete_command },
-		{ "CD", tConcreteCommandFactory<tChangeDirCommand>::create_concrete_command },
-		{ "RD", tConcreteCommandFactory<tRemoveDirCommand>::create_concrete_command },
-		{ "DELTREE", tConcreteCommandFactory<tRecursiveRemoveDirCommand>::create_concrete_command },
-		{ "MF", tConcreteCommandFactory<tMakeFileCommand>::create_concrete_command },
-		{ "MHL", tConcreteCommandFactory<tMakeHardLinkCommand>::create_concrete_command },
-		{ "MDL", tConcreteCommandFactory<tMakeSoftLinkCommand>::create_concrete_command },
-		{ "DEL", tConcreteCommandFactory<tDelCommand>::create_concrete_command },
-		{ "COPY", tConcreteCommandFactory<tCopyCommand>::create_concrete_command },
-		{ "MOVE", tConcreteCommandFactory<tMoveCommand>::create_concrete_command },
-	}
+	: TypesByName{10, ci_string_hash}
 {
+	TypesByName["MD"] = tConcreteCommandFactory<tMakeDirCommand>::create_concrete_command;
+	TypesByName["CD"] = tConcreteCommandFactory<tChangeDirCommand>::create_concrete_command;
+	TypesByName["RD"] = tConcreteCommandFactory<tRemoveDirCommand>::create_concrete_command;
+	TypesByName["DELTREE"] = tConcreteCommandFactory<tRecursiveRemoveDirCommand>::create_concrete_command;
+	TypesByName["MF"] = tConcreteCommandFactory<tMakeFileCommand>::create_concrete_command;
+	TypesByName["MHL"] = tConcreteCommandFactory<tMakeHardLinkCommand>::create_concrete_command;
+	TypesByName["MDL"] = tConcreteCommandFactory<tMakeSoftLinkCommand>::create_concrete_command;
+	TypesByName["DEL"] = tConcreteCommandFactory<tDelCommand>::create_concrete_command;
+	TypesByName["COPY"] = tConcreteCommandFactory<tCopyCommand>::create_concrete_command;
+	TypesByName["MOVE"] = tConcreteCommandFactory<tMoveCommand>::create_concrete_command;
 }
 
 std::vector<ci_string> parse_command_text (const ci_string& newCommandText)

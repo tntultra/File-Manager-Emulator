@@ -42,3 +42,8 @@ std::istream& getline(std::istream&& is, ci_string& str)
 	str = buffer.c_str();
 	return is;
 }
+
+size_t ci_string_hash(const ci_string& ciStr)
+{
+	return std::hash<std::string>()(ciStr.c_str());
+}

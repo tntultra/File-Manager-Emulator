@@ -43,7 +43,7 @@ public:
 
 private:
 	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, std::vector<ci_string>&)>;
-	std::unordered_map<ci_string, funcPtr> TypesByName;
+	std::unordered_map<ci_string, funcPtr, decltype(&ci_string_hash)> TypesByName;
 };
 
 std::vector<ci_string> parse_command_text(const ci_string& newCommandText);

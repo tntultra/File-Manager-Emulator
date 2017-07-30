@@ -38,3 +38,5 @@ std::istream& getline(std::istream&  is, ci_string& str, char delim);
 std::istream& getline(std::istream&& is, ci_string& str, char delim);
 std::istream& getline(std::istream&  is, ci_string& str);
 std::istream& getline(std::istream&& is, ci_string& str);
+
+size_t ci_string_hash(const ci_string& ciStr);
