@@ -2,8 +2,9 @@
 #include "Command.h"
 
 #include <string>
+#include "CIString.h"
 
-tCommand::tCommand(tFileManager* receiver, std::vector<std::string>& parsedStr) :
+tCommand::tCommand(tFileManager* receiver, std::vector<ci_string>& parsedStr) :
 	Receiver{ receiver },
 	Name{ parsedStr[0] }
 {
@@ -13,12 +14,12 @@ tCommand::tCommand(tFileManager* receiver, std::vector<std::string>& parsedStr) 
 	}
 }
 
-void tCommand :: split_path(tPath* parsedPath, const std::string& text)
+void tCommand :: split_path(tPath* parsedPath, const ci_string& text)
 {
 	const auto slash = '\\';
 	size_t begin = 0, slash_pos;
 	auto firstSqBracket = text.find('[');
-	if (firstSqBracket != std::string::npos) {
+	if (firstSqBracket != ci_string::npos) {
 		begin = firstSqBracket + 1;
 		auto linkText = text.substr(0, firstSqBracket);
 		if (linkText == "hlink") {
@@ -31,8 +32,8 @@ void tCommand :: split_path(tPath* parsedPath, const std::string& text)
 		slash_pos = text.find(slash, begin);
 		parsedPath->Path.push_back(text.substr(begin, slash_pos - begin));
 		begin = slash_pos + 1;
-	} while (slash_pos != std::string::npos);
-	if (firstSqBracket != std::string::npos) {
+	} while (slash_pos != ci_string::npos);
+	if (firstSqBracket != ci_string::npos) {
 		auto name = parsedPath->Path.back();
 		name = name.substr(0, name.rfind(']'));
 	}

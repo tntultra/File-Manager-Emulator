@@ -10,7 +10,7 @@ bool operator< (tDir& lhs, tDir& rhs) {
 	return lhs.Name < rhs.Name;
 }
 
-tDir::tDir (tDir* parent, const std::string& name) :
+tDir::tDir (tDir* parent, const ci_string& name) :
 	Parent{ parent }, 
 	Name {name}
 {
@@ -33,7 +33,7 @@ tDir& tDir::operator= (tDir& rhs) {
 	return *this;
 }
 
-std::string tDir::path ()
+ci_string tDir::path ()
 {
 	auto parent = Parent;
 	auto path = name ();
@@ -43,7 +43,7 @@ std::string tDir::path ()
 	return path;
 }
 
-std::string tDir::name ()
+ci_string tDir::name ()
 {
 	return Name;
 }
@@ -75,31 +75,31 @@ tDir* tDir::parent ()
 	return Parent;
 }
 
-tDir::D_CIT tDir::internal_search_dir (tDir::D_CIT start, tDir::D_CIT end, const std::string& dirName)
+tDir::D_CIT tDir::internal_search_dir (tDir::D_CIT start, tDir::D_CIT end, const ci_string& dirName)
 {
 	return std::find_if(start, end,
 		[&](auto&& dir) { return dir.name() == dirName; });
 }
 
-tDir::F_IT tDir::internal_search_file_or_link(tDir::F_IT start, tDir::F_IT end, const std::string& fileName)
+tDir::F_IT tDir::internal_search_file_or_link(tDir::F_IT start, tDir::F_IT end, const ci_string& fileName)
 {
 	return std::find_if(start, end,
 		[&](auto&& file) { return file->name() == fileName; });
 }
 
-bool tDir::hard_link_to_file_exists (const std::string& fileName)
+bool tDir::hard_link_to_file_exists (const ci_string& fileName)
 {
 	return std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f) { return f->get_type () == FILE_TYPE::HARD_LINK && fileName[0] ? f->name() == fileName : true; }) != Files.end();
 }
 
-bool tDir::soft_link_to_file_exists(const std::string& fileName)
+bool tDir::soft_link_to_file_exists(const ci_string& fileName)
 {
 	return std::find_if(Files.begin(), Files.end(),
 		[&](auto&& f) { return f->get_type() == FILE_TYPE::SOFT_LINK && f->name() == fileName; }) != Files.end();
 }
 
-tDir* tDir::get_dir_by_name (const std::string& dirName)
+tDir* tDir::get_dir_by_name (const ci_string& dirName)
 {
 	auto it = internal_search_dir(Dirs.begin(), Dirs.end(), dirName);
 	if (it != Dirs.end()) {
@@ -132,7 +132,7 @@ std::shared_ptr<tFileBase> tDir::get_file_or_link_by_file (std::shared_ptr<tFile
 	return (it != Files.end() ? *it : nullptr);
 }
 
-std::shared_ptr<tFileBase> tDir::get_file_by_name (const std::string& fileName)
+std::shared_ptr<tFileBase> tDir::get_file_by_name (const ci_string& fileName)
 {
 	auto it = internal_search_file_or_link(Files.begin(), Files.end(), fileName);
 	if (it != Files.end()) {
@@ -141,7 +141,7 @@ std::shared_ptr<tFileBase> tDir::get_file_by_name (const std::string& fileName)
 	return nullptr;
 }
 
-std::vector<std::shared_ptr<tFileBase>> tDir::get_all_files_by_name(const std::string& fileName)
+std::vector<std::shared_ptr<tFileBase>> tDir::get_all_files_by_name(const ci_string& fileName)
 {
 	std::vector<std::shared_ptr<tFileBase>> result;
 	auto start = internal_search_file_or_link(Files.begin (), Files.end(), fileName);
@@ -151,13 +151,13 @@ std::vector<std::shared_ptr<tFileBase>> tDir::get_all_files_by_name(const std::s
 	return result;
 }
 
-void tDir::create_dir (const std::string& dirName)
+void tDir::create_dir (const ci_string& dirName)
 {
 	Dirs.push_back(tDir{ this, dirName });
 	//DirIndex[dirName] = &Dirs.back ();
 }
 
-void tDir::remove_dir (const std::string& dirName)
+void tDir::remove_dir (const ci_string& dirName)
 {
 	auto it = std::find_if(Dirs.begin(), Dirs.end(),
 		[&](auto&& dir) { return dir.name() == dirName; });
@@ -169,16 +169,16 @@ void tDir::remove_dir (const std::string& dirName)
 		//some kind of notification, that dir doesnt contain other dir with such name
 	}
 }
-void tDir::recursive_remove_dir (const std::string& dirName)
+void tDir::recursive_remove_dir (const ci_string& dirName)
 {
 	Dirs.erase(internal_search_dir(Dirs.begin(), Dirs.end(), dirName));
 }
-void tDir::create_file (const std::string& fileName)
+void tDir::create_file (const ci_string& fileName)
 {
 	Files.push_back(std::make_shared<tFile>(fileName ));
 	//FileIndex[fileName] = &Files.back();
 }
-void tDir::remove_file (const std::string& fileName)
+void tDir::remove_file (const ci_string& fileName)
 {
 	auto it = internal_search_file_or_link(Files.begin(), Files.end(), fileName);
 	if (it != Files.end()) {

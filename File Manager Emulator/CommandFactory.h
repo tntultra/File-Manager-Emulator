@@ -8,7 +8,7 @@
 template <class COMMAND>
 struct tConcreteCommandFactory
 {
-	static std::unique_ptr<tCommand> create_concrete_command(tFileManager* receiver, std::vector<std::string>& parsedString)
+	static std::unique_ptr<tCommand> create_concrete_command(tFileManager* receiver, std::vector<ci_string>& parsedString)
 	{
 		return std::unique_ptr<tCommand>(new COMMAND(receiver, parsedString ));
 	}
@@ -39,11 +39,11 @@ public:
 		MOVE
 	};*/
 
-	std::unique_ptr<tCommand> create_command(tFileManager* receiver, const std::string& newCommandText);
+	std::unique_ptr<tCommand> create_command(tFileManager* receiver, const ci_string& newCommandText);
 
 private:
-	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, std::vector<std::string>&)>;
-	std::unordered_map<std::string, funcPtr> TypesByName;
+	using funcPtr = std::function<std::unique_ptr<tCommand>(tFileManager*, std::vector<ci_string>&)>;
+	std::unordered_map<ci_string, funcPtr> TypesByName;
 };
 
-std::vector<std::string> parse_command_text(const std::string& newCommandText);
+std::vector<ci_string> parse_command_text(const ci_string& newCommandText);

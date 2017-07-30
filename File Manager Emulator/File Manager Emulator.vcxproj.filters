@@ -51,6 +51,9 @@
     <ClInclude Include="FileManagerController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CIString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -84,6 +87,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FileManagerController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CIString.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

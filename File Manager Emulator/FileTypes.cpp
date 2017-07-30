@@ -3,7 +3,7 @@
 #include <list>
 #include <algorithm>
 
-std::string tFile::get_name_impl () noexcept {
+ci_string tFile::get_name_impl () noexcept {
 	return Name;
 }
 
@@ -43,7 +43,7 @@ void tFile::remove_soft_link (std::shared_ptr<tFileBase> sl)
 	}));
 }
 
-std::string tHardLink::get_name_impl () noexcept {
+ci_string tHardLink::get_name_impl () noexcept {
 	if (!File.expired()) {
 		return "hlink[" + File.lock()->name() + "]";
 	}
@@ -59,7 +59,7 @@ tHardLink::tHardLink (std::shared_ptr<tFileBase> file) :
 {
 }
 
-std::string tSoftLink::get_name_impl() noexcept {
+ci_string tSoftLink::get_name_impl() noexcept {
 	if (!File.expired()) {
 		return "dlink[" + File.lock()->name() + "]";
 	}

@@ -2,8 +2,9 @@
 #include "CommandFactory.h"
 #include "Commands.h"
 #include <filesystem>
+#include "CIString.h"
 
-std::unique_ptr<tCommand> tCommandFactory :: create_command(tFileManager* receiver, const std::string& newCommandText)
+std::unique_ptr<tCommand> tCommandFactory :: create_command(tFileManager* receiver, const ci_string& newCommandText)
 {
 	auto parsedString = parse_command_text(newCommandText);
 	if (parsedString.empty()) {
@@ -32,10 +33,10 @@ tCommandFactory::tCommandFactory ()
 {
 }
 
-std::vector<std::string> parse_command_text (const std::string& newCommandText)
+std::vector<ci_string> parse_command_text (const ci_string& newCommandText)
 {
 	const auto ws = ' ';
-	std::vector<std::string> splits;
+	std::vector<ci_string> splits;
 	size_t begin = 0, ws_pos;
 	while (begin < newCommandText.length() && newCommandText[begin] == ws)
 		++begin;
@@ -44,6 +45,6 @@ std::vector<std::string> parse_command_text (const std::string& newCommandText)
 		splits.push_back(newCommandText.substr(begin, ws_pos - begin));
 		begin = ws_pos + 1;
 		
-	} while (ws_pos != std::string::npos);
+	} while (ws_pos != ci_string::npos);
 	return splits;
 }

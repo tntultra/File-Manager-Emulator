@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include "CIString.h"
 
 class tDir
 {
@@ -14,42 +15,42 @@ class tDir
 	using D_CIT = std::list<tDir>::iterator;
 
 	tDir* Parent;
-	std::string Name;
+	ci_string Name;
 	std::list<tDir> Dirs;
 	std::list<std::shared_ptr<tFileBase> > Files;
 
-	D_CIT internal_search_dir(D_CIT start, D_CIT end, const std::string& dirName);//should return optional
+	D_CIT internal_search_dir(D_CIT start, D_CIT end, const ci_string& dirName);//should return optional
 
-	F_IT internal_search_file_or_link(F_IT start, F_IT end, const std::string& fileName);
+	F_IT internal_search_file_or_link(F_IT start, F_IT end, const ci_string& fileName);
 
-	bool hard_link_to_file_exists(const std::string& fileName = "");//blank means any hardlink, special behavior for move operation
-	bool soft_link_to_file_exists(const std::string& fileName);
+	bool hard_link_to_file_exists(const ci_string& fileName = "");//blank means any hardlink, special behavior for move operation
+	bool soft_link_to_file_exists(const ci_string& fileName);
 
 public:
-	tDir(tDir* parent, const std::string& name);
+	tDir(tDir* parent, const ci_string& name);
 	tDir(tDir&&) = default;
 	tDir(const tDir&);
 	tDir& operator=(tDir&&) = default;
 	tDir& operator=(tDir&);
 	~tDir() = default;
 
-	std::string path();
-	std::string name();
+	ci_string path();
+	ci_string name();
 	bool empty();
 	bool can_be_removed();
 
 	tDir* parent();
-	tDir* get_dir_by_name(const std::string& dirName);//add version
+	tDir* get_dir_by_name(const ci_string& dirName);//add version
 	std::shared_ptr<tFileBase> get_file_or_link_by_file(std::shared_ptr<tFileBase> file);
-	std::shared_ptr<tFileBase> get_file_by_name(const std::string& fileName);//add version
-	std::vector<std::shared_ptr<tFileBase>> get_all_files_by_name(const std::string& fileName);
+	std::shared_ptr<tFileBase> get_file_by_name(const ci_string& fileName);//add version
+	std::vector<std::shared_ptr<tFileBase>> get_all_files_by_name(const ci_string& fileName);
 
-	void create_dir(const std::string& dirName);
-	void remove_dir(const std::string& dirName);
-	void recursive_remove_dir(const std::string& dirName);
+	void create_dir(const ci_string& dirName);
+	void remove_dir(const ci_string& dirName);
+	void recursive_remove_dir(const ci_string& dirName);
 	
-	void create_file(const std::string& fileName);
-	void remove_file(const std::string& fileName);//simply removes file (or link) from dir.
+	void create_file(const ci_string& fileName);
+	void remove_file(const ci_string& fileName);//simply removes file (or link) from dir.
 	//filemanager handles all dynamic links that are associated with it
 
 	void create_hard_link(std::shared_ptr<tFileBase> file);

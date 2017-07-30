@@ -13,20 +13,20 @@ class tCommand
 	{
 		bool IsHardLink = false;
 		bool IsSoftLink = false;
-		std::vector<std::string> Path;
+		std::vector<ci_string> Path;
 	};
 
 	virtual void executeImpl() = 0;
-	void split_path(tPath* path, const std::string& text);
+	void split_path(tPath* path, const ci_string& text);
 protected:
 
 	tFileManager* Receiver;
-	std::string Name;
+	ci_string Name;
 	tPath Source;
 	tPath Dest;
 
 public:
-	tCommand(tFileManager* receiver, std::vector<std::string>& parsedStr);
+	tCommand(tFileManager* receiver, std::vector<ci_string>& parsedStr);
 	virtual ~tCommand() = default;
 
 	void execute()

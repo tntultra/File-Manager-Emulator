@@ -3,7 +3,7 @@
 #include "FileBase.h"
 #include <queue>
 
-tDir* tFileManager::get_dir_by_path(const std::vector<std::string>& path, bool parent)
+tDir* tFileManager::get_dir_by_path(const std::vector<ci_string>& path, bool parent)
 {
 	if (!path.empty()) {
 		auto pathHasFullName = tome(path.front());
@@ -17,12 +17,12 @@ tDir* tFileManager::get_dir_by_path(const std::vector<std::string>& path, bool p
 	return nullptr;
 }
 
-/*bool tFileManager::path_represents_current_dir(const std::vector<std::string>& path)
+/*bool tFileManager::path_represents_current_dir(const std::vector<ci_string>& path)
 {
 	return CurrentDir-> path () == path;
 }*/
 
-std::shared_ptr<tFileBase> tFileManager::get_file_by_path(const std::vector<std::string>& path)
+std::shared_ptr<tFileBase> tFileManager::get_file_by_path(const std::vector<ci_string>& path)
 {
 	if (!has_extension(path))
 		return nullptr;
@@ -33,7 +33,7 @@ std::shared_ptr<tFileBase> tFileManager::get_file_by_path(const std::vector<std:
 }
 
 //mf 
-void tFileManager::create_file(const std::vector<std::string>& path)
+void tFileManager::create_file(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	auto fileName = get_name(path);
@@ -45,7 +45,7 @@ void tFileManager::create_file(const std::vector<std::string>& path)
 }
 
 //md
-void tFileManager::create_dir(const std::vector<std::string>& path)
+void tFileManager::create_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, true);
 	auto dirName = get_name(path);
@@ -55,7 +55,7 @@ void tFileManager::create_dir(const std::vector<std::string>& path)
 }
 
 //cd
-void tFileManager::change_dir(const std::vector<std::string>& path)
+void tFileManager::change_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	if (dir) {
@@ -64,7 +64,7 @@ void tFileManager::change_dir(const std::vector<std::string>& path)
 }
 
 //rd
-void tFileManager::remove_dir(const std::vector<std::string>& path)
+void tFileManager::remove_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	if (dir ==  CurrentDir || !dir-> empty()) {
@@ -77,7 +77,7 @@ void tFileManager::remove_dir(const std::vector<std::string>& path)
 }
 
 //deltree
-void tFileManager::recursive_remove_dir(const std::vector<std::string>& path)
+void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	if (!dir)
@@ -89,7 +89,7 @@ void tFileManager::recursive_remove_dir(const std::vector<std::string>& path)
 }
 
 //mhl
-void tFileManager::create_hard_link(const std::vector<std::string>& source, const std::vector<std::string>& dest)
+void tFileManager::create_hard_link(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto file = get_file_by_path(source);
 	if (file &&  file->get_type() != FILE_TYPE::HARD_LINK &&  file->get_type() != FILE_TYPE::SOFT_LINK) {
@@ -101,7 +101,7 @@ void tFileManager::create_hard_link(const std::vector<std::string>& source, cons
 }
 
 //mdl
-void tFileManager::create_soft_link(const std::vector<std::string>& source, const std::vector<std::string>& dest)
+void tFileManager::create_soft_link(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto file = get_file_by_path(source);
 	if (file &&  file->get_type() != FILE_TYPE::HARD_LINK &&  file->get_type() != FILE_TYPE::SOFT_LINK) {
@@ -133,7 +133,7 @@ void tFileManager::remove_all_file_soft_links (std::shared_ptr<tFileBase>& file)
 }
 
 //del
-void tFileManager::delete_file_or_link(const std::vector<std::string>& path)
+void tFileManager::delete_file_or_link(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	if (dir) {
@@ -155,7 +155,7 @@ void tFileManager::delete_file_or_link(const std::vector<std::string>& path)
 }
 
 //move
-void tFileManager::move(const std::vector<std::string>& source, const std::vector<std::string>& dest)
+void tFileManager::move(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto dirToMoveInto = get_dir_by_path(dest, false);
 	if (!has_extension(source)) {//source is actually a directory -> move directory
@@ -180,7 +180,7 @@ void tFileManager::move(const std::vector<std::string>& source, const std::vecto
 }
 
 //copy
-void tFileManager::copy(const std::vector<std::string>& source, const std::vector<std::string>& dest)
+void tFileManager::copy(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto dirToMoveInto = get_dir_by_path(dest, false);
 	if (!has_extension(source)) {
@@ -196,20 +196,20 @@ void tFileManager::copy(const std::vector<std::string>& source, const std::vecto
 	}
 }
 
-std::string get_name(const std::vector<std::string>& path)
+ci_string get_name(const std::vector<ci_string>& path)
 {
 	if (path.empty()) {
-		return std::string{};
+		return ci_string{};
 	}
 	return path.back();
 }
 
-bool tome(const std::string& firstDir)
+bool tome(const ci_string& firstDir)
 {
-	return firstDir.find(':') != std::string::npos;
+	return firstDir.find(':') != ci_string::npos;
 }
 
-bool has_extension (const std::vector<std::string>& path)
+bool has_extension (const std::vector<ci_string>& path)
 {
-	return get_name(path).rfind('.') != std::string::npos;
+	return get_name(path).rfind('.') != ci_string::npos;
 }

@@ -2,8 +2,7 @@
 
 #include <memory>
 #include <string>
-
-
+#include "CIString.h"
 
 enum class FILE_TYPE
 {
@@ -14,7 +13,7 @@ enum class FILE_TYPE
 
 class tFileBase
 {
-	virtual std::string get_name_impl() noexcept = 0;
+	virtual ci_string get_name_impl() noexcept = 0;
 	virtual FILE_TYPE get_type_impl() noexcept = 0;
 	virtual std::unique_ptr<tFileBase> clone_impl() = 0;
 public:
@@ -25,7 +24,7 @@ public:
 		return get_type_impl();
 	}
 
-	std::string name() noexcept {
+	ci_string name() noexcept {
 		return get_name_impl();
 	}
 	std::unique_ptr<tFileBase> clone()
