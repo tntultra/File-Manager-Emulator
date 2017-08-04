@@ -1,36 +1,41 @@
 #pragma once
 
-#include <memory>
-#include <string>
 #include "CIString.h"
 
-enum class FILE_TYPE
+#include <memory>
+#include <unordered_map>
+
+//soft (dynamic) link contains only 1 entry: fileNodeId : linkName
+//dir contains 2 default entries : ".", ".." and then entry for each file/dir in dir. file/dirNodeId : file/DirName
+//for hardlinks dir contains entry with same Inode id, but name is decorated with hlink[]
+struct DataBlock
 {
-	REGULAR_FILE,
-	HARD_LINK,
-	SOFT_LINK
+	unsigned get_node_by_name(const ci_string& name);
+	ci_string get_name_by_id(unsigned id);
+
+	std::unordered_map<unsigned, ci_string> Refs;
+	//std::unordered_map<ci_string, unsigned> StringRefs;
 };
 
-class tFileBase
+//hardlink adds additional entry in dir for a fileNodeId and increases it's HardRefCount
+
+extern const unsigned UNDEFINED_INODE_ID;
+
+struct INode // THIS IS A FILE ITSELF
 {
-	virtual ci_string get_name_impl() noexcept = 0;
-	virtual FILE_TYPE get_type_impl() noexcept = 0;
-	virtual std::unique_ptr<tFileBase> clone_impl() = 0;
-public:
-	virtual ~tFileBase() = default;
-	
-	FILE_TYPE get_type() noexcept
-	{
-		return get_type_impl();
-	}
 
-	ci_string name() noexcept {
-		return get_name_impl();
-	}
-	std::unique_ptr<tFileBase> clone()
+	enum class INodeType : int8_t
 	{
-		return clone_impl();
-	}
+		FILE,
+		DIR,
+		SOFTLINK,
+		UNDEFINED
+	};
+
+
+	unsigned Id = static_cast<unsigned> (-1);
+	unsigned HardRefCount = 0;
+	unsigned SoftRefCount = 0;//for fast checking about softlink's existance on deletion
+	INodeType Type = INodeType::UNDEFINED;//file,dir,softlink ("dynamic link")
+	std::unique_ptr<DataBlock> DataBlock = nullptr;//file has no datablock
 };
-
-

@@ -2,19 +2,20 @@
 #include "FileManager.h"
 #include "FileBase.h"
 #include <queue>
+#include <unordered_set>
 
-tDir* tFileManager::get_dir_by_path(const std::vector<ci_string>& path, bool parent)
+unsigned tFileManager::get_dir_by_path(const std::vector<ci_string>& path, bool parent)
 {
 	if (!path.empty()) {
 		auto pathHasFullName = tome(path.front());
-		auto startDir = pathHasFullName ? &BaseDir : CurrentDir;
+		auto startDir = pathHasFullName ? &*Nodes.begin() : CurrentDir;
 		auto end = has_extension(path) || parent ? path.end() - 1 : path.end();
 		for (auto it = pathHasFullName ? path.begin()+1 : path.begin (); startDir && it != end; ++it) {
-			startDir = startDir->get_dir_by_name(*it);
+			startDir = NodeIndex[startDir->DataBlock->get_node_by_name(*it)];
 		}
-		return startDir;
+		return startDir-> Id;
 	}
-	return nullptr;
+	return UNDEFINED_INODE_ID;
 }
 
 /*bool tFileManager::path_represents_current_dir(const std::vector<ci_string>& path)
@@ -22,177 +23,338 @@ tDir* tFileManager::get_dir_by_path(const std::vector<ci_string>& path, bool par
 	return CurrentDir-> path () == path;
 }*/
 
-std::shared_ptr<tFileBase> tFileManager::get_file_by_path(const std::vector<ci_string>& path)
+unsigned tFileManager::get_file_by_path(const std::vector<ci_string>& path)
 {
 	if (!has_extension(path))
-		return nullptr;
+		return UNDEFINED_INODE_ID;
 	auto fileDir = get_dir_by_path(path, false);
 	if (!fileDir)
-		return nullptr;
-	return fileDir->get_file_by_name(get_name(path));
+		return UNDEFINED_INODE_ID;
+	return node_by_id(fileDir)->DataBlock->get_node_by_name(get_name(path));
 }
 
-//mf 
+bool tFileManager::dir_can_be_removed (unsigned dirId)
+{
+	std::queue<INode*> dirs;
+	dirs.push(NodeIndex[dirId]);
+	while (!dirs.empty()) {
+		auto dirNode = dirs.front();
+		dirs.pop();
+		if (dir_has_hardlinks_to_files (dirNode)) {
+			return false;
+		}
+		for (auto& childDir : dirNode->DataBlock->Refs) {
+			dirs.push(NodeIndex[childDir.first]);
+		}
+	}
+}
+
+//MF – creates a file.
+//Command format : MF[drive:]path
+//Notes : If such file already exists with the given path then FME should continue to the next
+//command in the batch file without any error rising.
 void tFileManager::create_file(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
 	auto fileName = get_name(path);
-	if (dir) {
-		auto file = dir->get_file_by_name(fileName);
-		if (!file)
-			dir->create_file(fileName);
+	if (dir!= UNDEFINED_INODE_ID) {
+		auto file = NodeIndex[dir]->DataBlock->get_node_by_name(fileName);
+		if (!file) {
+			auto newFile = create_new_node(INode::INodeType::FILE);
+			node_by_id(dir)->DataBlock->Refs[newFile->Id] = fileName;
+		}
 	}
 }
 
-//md
+//MD – creates a directory.
+//Command format : MD[drive:]path
+//Notes : MD should not create any intermediate directories in the path.
 void tFileManager::create_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, true);
 	auto dirName = get_name(path);
-	if (dir) {
-		dir->create_dir(dirName);
+	if (dir != UNDEFINED_INODE_ID) {
+		auto newDir = create_new_node(INode::INodeType::DIR);
+		node_by_id(dir)->DataBlock->Refs[newDir->Id] = dirName;
 	}
 }
 
-//cd
+//CD – changes the current directory.
+//Command format : CD[drive:][path]
+//Note that using CD without parameters is not allowed.
 void tFileManager::change_dir(const std::vector<ci_string>& path)
 {
 	auto dir = get_dir_by_path(path, false);
-	if (dir) {
-		 CurrentDir = dir;
+	if (dir != UNDEFINED_INODE_ID) {
+		 CurrentDir = NodeIndex[dir];
 	}
 }
 
-//rd
+//RD – removes a directory if it is empty(doesn’t contain any files or subdirectories).
+//Command format : RD[drive:]path
+//Notes : It is not allowed to delete the current directory in such way.
 void tFileManager::remove_dir(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, false);
-	if (dir ==  CurrentDir || !dir-> empty()) {
-		return;
-	}
-	auto parent = dir-> parent ();
-	if (parent) {
-		parent->remove_dir(get_name(path));
+	auto dirId = get_dir_by_path(path, false);
+	if (dirId != UNDEFINED_INODE_ID) {
+		auto dirNode = NodeIndex[dirId];
+		if (dirNode == CurrentDir) {
+			return;
+		}
+		auto parentId = dirNode->DataBlock->get_node_by_name("..");
+		if (parentId != UNDEFINED_INODE_ID) {
+			auto refs = NodeIndex[parentId]->DataBlock->Refs;
+			refs.erase(
+				std::find_if(refs.begin(), refs.end(), [&refs](auto&& pair) {
+				return pair.second == get_name(path);
+			}));
+			NodeIndex.erase(dirId);
+		}
 	}
 }
 
-//deltree
+//DELTREE – removes a directory with all its subdirectories.
+//Command format : DELTREE[drive:]path
+//Note that you can’t remove a directory that contains current directory as one of its subdirectories.
+//One can not delete a file which has an attached hard link but can delete a dynamic link.
+//When a file is deleted its all dynamic links are also should be deleted.If a file has both hard and
+//dynamic links FME should keep them all unchanged.
 void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, false);
-	if (!dir)
+	auto dirId = get_dir_by_path(path, false);
+	if (dirId == UNDEFINED_INODE_ID || dirId == CurrentDir-> Id)
 		return;
-	auto parent = dir->parent();
-	if (parent) {
-		parent->recursive_remove_dir (get_name(path));
+	auto parentId = NodeIndex[dirId]->DataBlock->get_node_by_name ("..");
+	if (parentId != UNDEFINED_INODE_ID) {
+
+		//store all INode ids in this folder and then remove them all at once from Nodes
+		std::unordered_set<unsigned> allInternalNodeIds;
+
+		std::queue<INode*> allInternalNodes;
+		allInternalNodes.push(NodeIndex[dirId]);
+		while (!allInternalNodes.empty()) {
+			auto node = allInternalNodes.front();
+			allInternalNodes.pop();
+			allInternalNodeIds.insert(node->Id);
+			if (node->Type == INode::INodeType::DIR) {
+				for (auto&& idNamePair : node->DataBlock->Refs) {
+					if (idNamePair.first == CurrentDir-> Id) {
+						return;//cannot remove dir with current dir in it
+					}
+					auto name = idNamePair.second;
+					if (name.find ("hlink") == std::string::npos) {
+						return;//cant remove dir with hlink in it
+					}
+					if (name != "." || name != "..") {//skip parent and current refs
+						allInternalNodes.push(NodeIndex[idNamePair.first]);
+					}
+				}
+			}
+		}
+
+		//remove from parent if dir can be removed
+		auto parent = NodeIndex[parentId];
+		parent->DataBlock->Refs.erase(parent->DataBlock->Refs.find(dirId));
+
+		//remove from Nodes and from NodeIndex
+
+		/*auto removeFromNodeIndex = [this, &allInternalNodeIds](auto&& pair) {
+			auto node = pair.second;
+			if (node->Type != INode::INodeType::SOFTLINK) {
+				return allInternalNodeIds.find(pair.first->Id) != allInternalNodeIds.end;
+			}
+			else {
+				auto fileId = node->DataBlock.Refs.begin()-> first;//because softlink's datablock always had only 1 entry for file
+				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end;
+			}
+		};
+		NodeIndex.erase(std::remove_if(NodeIndex.begin(), NodeIndex.end(), removeFromNodeIndex), NodeIndex.end());*/
+
+		auto removeFromNodes = [this, &allInternalNodeIds](auto&& nodeRef) {
+			auto node = nodeRef.second;
+			if (node->Type != INode::INodeType::SOFTLINK) {
+				return allInternalNodeIds.find(node.Id) != allInternalNodeIds.end;
+			}
+			else {
+				auto fileId = node.DataBlock.Refs.begin()->first;//because softlink's datablock always had only 1 entry for file
+				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end;
+			}
+		};
+		//Nodes.erase(std::remove_if(Nodes.begin(), Nodes.end(), removeFromNodes), Nodes.end());
+
+		for (auto it = Nodes.begin(); it != Nodes.end();) {
+			if (removeFromNodes(*it)) {
+				NodeIndex.erase(it->Id);
+				it = Nodes.erase(it);
+			} else {
+				++it;
+			}
+		}
 	}
 }
 
-//mhl
+//MHL – creates a hard link to a file / directory and places it in given location.
+//Command format : MHL[drive:]source[drive:]destination
+//Notes : Destination should contain only path without any file name. 
+//If such link already exists then FME should continue to the next
+//	command in the batch file without any error rising.
+//The output format for dynamic and hard links should be the following :
+//hlink[full path] for hard links and dlink[full path] respectively.
 void tFileManager::create_hard_link(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto file = get_file_by_path(source);
-	if (file &&  file->get_type() != FILE_TYPE::HARD_LINK &&  file->get_type() != FILE_TYPE::SOFT_LINK) {
-		auto dirToInsertInto = get_dir_by_path(dest, false);
-		if (dirToInsertInto) {
-			dirToInsertInto->create_hard_link(file);
-		}
+	if (has_extension(dest)) {
+		return;
 	}
+	auto dirToInsertIntoId = get_dir_by_path(dest, false);
+	if (dirToInsertIntoId == UNDEFINED_INODE_ID) {
+		return;//not valid name of dest
+	}
+	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
+	if (sourceId != UNDEFINED_INODE_ID) {
+		return;//not valid name of source
+	}
+
+	auto destNode = NodeIndex[dirToInsertIntoId];//guaranteed to be a directory
+	auto hlinkName = "hlink[" + get_name(source) + "]";//name for a link in directory's datablock
+	if (destNode->DataBlock->get_node_by_name(hlinkName) != UNDEFINED_INODE_ID) {
+		return;//hlink already exists
+	}
+
+	++NodeIndex[sourceId]->HardRefCount;//increase ref count
+	destNode->DataBlock->Refs[sourceId] = hlinkName;//add data to dest's node datablock
 }
 
-//mdl
+//MDL– creates a dynamic link to a file / directory and places it in given location.
+//Command format : MDL[drive:]source[drive:]destination
+//Notes : Destination should contain only path without any file name.
+//If such link already exists then FME should continue to the next
+//	command in the batch file without any error rising.
+//The output format for dynamic and hard links should be the following :
+//hlink[full path] for hard links and dlink[full path] respectively.
 void tFileManager::create_soft_link(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto file = get_file_by_path(source);
-	if (file &&  file->get_type() != FILE_TYPE::HARD_LINK &&  file->get_type() != FILE_TYPE::SOFT_LINK) {
-		auto dirToInsertInto = get_dir_by_path(dest, false);
-		if (dirToInsertInto) {
-			dirToInsertInto->create_soft_link(file);
-		}
+	if (has_extension(dest)) {
+		return;
 	}
+	auto dirToInsertIntoId = get_dir_by_path(dest, false);
+	if (dirToInsertIntoId == UNDEFINED_INODE_ID) {
+		return;//not valid name of dest
+	}
+	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
+	if (sourceId != UNDEFINED_INODE_ID) {
+		return;//not valid name of source
+	}
+
+	//find in dest's datablock exactly following: softlink node with only ref id equal to sourceId
+	auto destNode = NodeIndex[dirToInsertIntoId];//guaranteed to be a directory
+	auto softlinkFindIt = std::find_if (destNode-> DataBlock->Refs.begin(), destNode->DataBlock->Refs.end(), [sourceId](auto&& idNamePair) {
+		auto node = NodeIndex[idNamePair.first];
+		return (node->Type == INode::INodeType::SOFTLINK && (*node->DataBlock->Refs.begin()).first == sourceId);
+	});
+	if (softlinkFindIt != destNode-> DataBlock->Refs.end()) {
+		return;//softlink already exists
+	}
+
+	++NodeIndex[sourceId]->SoftRefCount;
+	auto newNode = create_new_node(INode::INodeType::SOFTLINK);
+	newNode->DataBlock->Refs.insert(std::make_pair (sourceId,"dlink[" + get_name(source) + "]"));
 }
 
-void tFileManager::remove_all_file_soft_links (std::shared_ptr<tFileBase>& file)
+void tFileManager::remove_all_file_soft_links (unsigned fileId)
 {
-	std::queue<tDir*> dirs;
-	dirs.push(&BaseDir);
-	while (!dirs.empty()) {
-		auto someDir = dirs.front();
-		dirs.pop();
-		std::shared_ptr<tFileBase> foundFile;
-		do {
-			foundFile = someDir->get_file_or_link_by_file(file);
-			if (foundFile && foundFile->get_type () == FILE_TYPE::SOFT_LINK) {
-				someDir->remove_file(foundFile->name());
+	std::unordered_set<unsigned> softLinksIdsToRemove;
+	for (auto it = Nodes.begin(); it != Nodes.end();) {
+		if (it-> Type == INode::INodeType::SOFTLINK) {
+			if (it-> DataBlock-> Refs.begin()-> first == fileId) {
+				softLinksIdsToRemove.insert(it->Id);
+				NodeIndex.erase(it->Id);
+				it = Nodes.erase(it);
+			} else {
+				++it;
 			}
-		} while (foundFile);
-		for (auto dir : someDir->Dirs) {
-			dirs.push(&dir);
+		}
+	}//removed all softlinks, havent removed them from directories yet
+	for (auto&& node : Nodes) {
+		if (node.Type == INode::INodeType::DIR) {
+			node.DataBlock->Refs.erase(std::remove_if(node.DataBlock->Refs.begin(), node.DataBlock->Refs.end(), [&softLinksIdsToRemove](auto&& idNamePair) {
+				return softLinksIdsToRemove.find(idNamePair.first) != softLinksIdsToRemove.end();
+			}));
 		}
 	}
 }
 
-//del
+//DEL – removes a file or link.
+//Command format : DEL[drive:]path
+//One can not delete a file which has an attached hard link but can delete a dynamic link.
+//When a file is deleted its all dynamic links are also should be deleted.If a file has both hard and
+//dynamic links FME should keep them all unchanged.
 void tFileManager::delete_file_or_link(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, false);
-	if (dir) {
-		auto file = dir->get_file_by_name(get_name(path));
-		if (file) {
-			auto ftype = file->get_type();
-			if ((ftype == FILE_TYPE::REGULAR_FILE && dynamic_cast<tFile*>(file.get())->has_hard_links())
-				|| ftype == FILE_TYPE::HARD_LINK) {
-				return;
-			}
-			//can remove only dynamic link or regular file without hardlinks
-			if (ftype == FILE_TYPE::REGULAR_FILE && dynamic_cast<tFile*>(file.get())->has_soft_links()) {
-				remove_all_file_soft_links(file);
-			}
-		}
-		//regular file without links or soft link -> simple remove from dir.
-		dir->remove_file(get_name(path));
+	auto fileId = get_file_by_path(path);
+	if (fileId == UNDEFINED_INODE_ID) {
+		return;//no such file
 	}
+	auto fileNode = NodeIndex[fileId];
+	if (fileNode->HardRefCount > 0) {
+		return;//cannot delete file with hardlinks to it
+	}
+	if (fileNode->SoftRefCount > 0) {
+		remove_all_file_soft_links(fileId);
+	}
+	NodeIndex[get_dir_by_path(path, true)]-> DataBlock-> Refs.erase(fileId);//remove record from dir's Refs
+	NodeIndex.erase(fileId);//erase from index
+	Nodes.erase (std::find_if (Nodes.begin (),Nodes.end (),[](auto&& node) {
+		return node->Id == fileId;
+	}));//erase file node
 }
 
-//move
+//MOVE – move an existing directory / file / link to another location
+//Command format : MOVE[drive:]source[drive:]destination
+//Notes : Program should move directory with all its content.In case when a file or directory which is
+//	being moved has a hard link, FME should terminate the MOVE operation and batch file execution.
+//	In case when any dynamic link(s) found and no hard link exists, then dynamic link(s) should be
+//	modified and contain new location information instead of the old one.
 void tFileManager::move(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto dirToMoveInto = get_dir_by_path(dest, false);
-	if (!has_extension(source)) {//source is actually a directory -> move directory
-		auto existingDir = get_dir_by_path(source, false);
-		if (existingDir && dirToMoveInto) {
-			if (!existingDir->can_be_removed())
-				throw std::runtime_error("moving directory with hardlink in it (or some of subdirectories)");
-			dirToMoveInto->insert_other_dir(std::move(*existingDir));
-			if (existingDir->parent())
-				existingDir->parent()->remove_dir(get_name(source));
-			existingDir->Parent = dirToMoveInto;
-		}
+	auto sourceId = has_extension(source) ? get_file_by_path (source) : get_dir_by_path (source, false);
+	auto sourceParentId = get_dir_by_path(source, true);
+	auto destId = get_dir_by_path(dest, false);
+	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID) {
+		return;
 	}
-	else {
-		auto existingFile = get_file_by_path(source);
-		if (existingFile && dirToMoveInto) {
-			auto existingDir = get_dir_by_path(source, false);
-			dirToMoveInto->move_file(existingFile);
-			existingDir->remove_file(get_name(source));
-		}
-	}
+	auto idNamePairIt = NodeIndex[sourceParentId]->DataBlock->Refs.find(sourceId);
+	auto fileName = idNamePairIt->second;
+	NodeIndex[sourceParentId]->DataBlock->Refs.erase(idNamePairIt);
+	NodeIndex[destId]->DataBlock->Refs[sourceId] = fileName;
 }
 
-//copy
+//COPY – copy an existed directory / file / link to another location.
+//Command format : COPY[drive:]source[drive:]destination
+//Notes : Program should copy directory with all its content.Destination path should not contain any
+//	file name otherwise FME should raise error.
 void tFileManager::copy(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto dirToMoveInto = get_dir_by_path(dest, false);
-	if (!has_extension(source)) {
-		auto existingDir = get_dir_by_path(source, false);
-		if (existingDir && dirToMoveInto) {
-			dirToMoveInto->insert_other_dir(*existingDir);
-		}
-	} else {
-		auto existingFile = get_file_by_path(source);
-		if (existingFile && dirToMoveInto) {
-			dirToMoveInto->copy_file(existingFile);
-		}
+	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
+	auto sourceParentId = get_dir_by_path(source, true);
+	auto destId = get_dir_by_path(dest, false);
+	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID) {
+		return;
+	}
+	auto idNamePairIt = NodeIndex[sourceParentId]->DataBlock->Refs.find(sourceId);
+	auto name = idNamePairIt->second;
+	auto sourceNode = NodeIndex[sourceId];
+	if (sourceNode-> Type == INode::INodeType::FILE) {
+		//full copy file -> make special function
+		auto newFileNode = create_new_node(INode::INodeType::FILE);
+		NodeIndex[destId]->DataBlock->Refs[newFileNode->Id] = name;
+	} else if (sourceNode-> Type == INode::INodeType::SOFTLINK) {
+		//full copy softlink -> make special function
+		auto newSoftLinkNode = create_new_node(INode::INodeType::FILE);
+		newSoftLinkNode->DataBlock->Refs.insert(std::make_pair(sourceId, sourceNode-> DataBlock-> Refs[sourceId]));
+		//end of copy
+		NodeIndex[destId]->DataBlock->Refs[newSoftLinkNode->Id] = name;
+	} else {//DIR
+		
 	}
 }
 
