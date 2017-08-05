@@ -5,6 +5,8 @@
 #include <memory>
 #include <unordered_map>
 
+extern const unsigned UNDEFINED_INODE_ID;
+
 //soft (dynamic) link contains only 1 entry: fileNodeId : linkName
 //dir contains 2 default entries : ".", ".." and then entry for each file/dir in dir. file/dirNodeId : file/DirName
 //for hardlinks dir contains entry with same Inode id, but name is decorated with hlink[]
@@ -19,7 +21,6 @@ struct DataBlock
 
 //hardlink adds additional entry in dir for a fileNodeId and increases it's HardRefCount
 
-extern const unsigned UNDEFINED_INODE_ID;
 
 struct INode // THIS IS A FILE ITSELF
 {
