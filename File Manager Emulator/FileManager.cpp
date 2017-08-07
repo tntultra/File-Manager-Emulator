@@ -5,62 +5,48 @@
 #include <unordered_set>
 #include <iostream>
 
-INode* tFileManager::create_new_node (INode::INodeType)
+INode* tFileManager::create_new_node (INode::INodeType type)
 {
 	INode newNode;
 	newNode.Id = ++LastNodeIndex;
+	newNode.Type = type;
+	if (type != INode::INodeType::FILE) {
+		newNode.DataBlock = std::make_unique<DataBlock>();
+		if (type == INode::INodeType::DIR) {
+			newNode.DataBlock->Refs.insert(std::make_pair(LastNodeIndex, "."));
+		}
+	}
 	Nodes.emplace_back(std::move(newNode));
+	NodeIndex[LastNodeIndex] = &Nodes.back();
 	return &Nodes.back();
 }
 
-INode* tFileManager::node_by_id (unsigned id)
+INode* tFileManager::node_by_id(unsigned id)
 {
-	return NodeIndex[id];
+	auto it = NodeIndex.find(id);
+	if (it != NodeIndex.end()) {
+		return it->second;
+	}
+	return nullptr;
 }
 
-unsigned tFileManager::get_dir_by_path(const std::vector<ci_string>& path, bool parent)
+unsigned tFileManager::get_node_by_path(const std::vector<ci_string>& path, bool parent)
 {
 	if (!path.empty()) {
 		auto pathHasFullName = tome(path.front());
-		auto startDir = pathHasFullName ? &*Nodes.begin() : CurrentDir;
-		auto end = has_extension(path) || parent ? path.end() - 1 : path.end();
-		for (auto it = pathHasFullName ? path.begin()+1 : path.begin (); startDir && it != end; ++it) {
-			startDir = NodeIndex[startDir->DataBlock->get_node_by_name(*it)];
+		auto node = pathHasFullName ? &*Nodes.begin() : CurrentDir;
+		auto end = parent ? path.end() - 1 : path.end();
+		for (auto it = pathHasFullName ? path.begin()+1 : path.begin (); node && it != end; ++it) {
+			node = node_by_id(node->DataBlock->get_node_by_name(*it));
 		}
-		return startDir-> Id;
+		return node ? node-> Id : UNDEFINED_INODE_ID;
 	}
-	return UNDEFINED_INODE_ID;
+	return CurrentDir-> Id;
 }
 
 /*bool tFileManager::path_represents_current_dir(const std::vector<ci_string>& path)
 {
 	return CurrentDir-> path () == path;
-}*/
-
-unsigned tFileManager::get_file_by_path(const std::vector<ci_string>& path)
-{
-	if (!has_extension(path))
-		return UNDEFINED_INODE_ID;
-	auto fileDir = get_dir_by_path(path, false);
-	if (!fileDir)
-		return UNDEFINED_INODE_ID;
-	return node_by_id(fileDir)->DataBlock->get_node_by_name(get_name(path));
-}
-
-/*bool tFileManager::dir_can_be_removed (unsigned dirId)
-{
-	std::queue<INode*> dirs;
-	dirs.push(NodeIndex[dirId]);
-	while (!dirs.empty()) {
-		auto dirNode = dirs.front();
-		dirs.pop();
-		if (dir_has_hardlinks_to_files (dirNode)) {
-			return false;
-		}
-		for (auto& childDir : dirNode->DataBlock->Refs) {
-			dirs.push(NodeIndex[childDir.first]);
-		}
-	}
 }*/
 
 INode* tFileManager::copy_node (unsigned nodeId)
@@ -99,19 +85,27 @@ INode* tFileManager::copy_node (unsigned nodeId)
 	return nullptr;
 }
 
+tFileManager::tFileManager ()
+{
+	auto root = create_new_node(INode::INodeType::DIR);
+	root-> DataBlock->Refs.insert(std::make_pair(LastNodeIndex, "."));
+	root-> DataBlock->Refs.insert(std::make_pair(UNDEFINED_INODE_ID, ".."));
+	CurrentDir = root;
+}
+
 //MF – creates a file.
 //Command format : MF[drive:]path
 //Notes : If such file already exists with the given path then FME should continue to the next
 //command in the batch file without any error rising.
 void tFileManager::create_file(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, false);
-	auto fileName = get_name(path);
-	if (dir!= UNDEFINED_INODE_ID) {
-		auto file = NodeIndex[dir]->DataBlock->get_node_by_name(fileName);
-		if (!file) {
+	auto dirId = get_node_by_path(path, true);
+	if (dirId!= UNDEFINED_INODE_ID) {
+		auto fileName = get_name(path);
+		auto file = NodeIndex[dirId]->DataBlock->get_node_by_name(fileName);
+		if (file == UNDEFINED_INODE_ID) {
 			auto newFile = create_new_node(INode::INodeType::FILE);
-			node_by_id(dir)->DataBlock->Refs[newFile->Id] = fileName;
+			node_by_id(dirId)->DataBlock->Refs[newFile->Id] = fileName;
 		}
 	}
 }
@@ -121,11 +115,11 @@ void tFileManager::create_file(const std::vector<ci_string>& path)
 //Notes : MD should not create any intermediate directories in the path.
 void tFileManager::create_dir(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, true);
-	auto dirName = get_name(path);
-	if (dir != UNDEFINED_INODE_ID) {
+	auto dirId = get_node_by_path(path, true);
+	if (dirId != UNDEFINED_INODE_ID) {
 		auto newDir = create_new_node(INode::INodeType::DIR);
-		node_by_id(dir)->DataBlock->Refs[newDir->Id] = dirName;
+		node_by_id(dirId)->DataBlock->Refs[newDir->Id] = get_name(path);
+		newDir->DataBlock->Refs.insert(std::make_pair(dirId, ".."));
 	}
 }
 
@@ -134,7 +128,7 @@ void tFileManager::create_dir(const std::vector<ci_string>& path)
 //Note that using CD without parameters is not allowed.
 void tFileManager::change_dir(const std::vector<ci_string>& path)
 {
-	auto dir = get_dir_by_path(path, false);
+	auto dir = get_node_by_path(path);
 	if (dir != UNDEFINED_INODE_ID) {
 		 CurrentDir = NodeIndex[dir];
 	}
@@ -145,7 +139,7 @@ void tFileManager::change_dir(const std::vector<ci_string>& path)
 //Notes : It is not allowed to delete the current directory in such way.
 void tFileManager::remove_dir(const std::vector<ci_string>& path)
 {
-	auto dirId = get_dir_by_path(path, false);
+	auto dirId = get_node_by_path(path);
 	if (dirId != UNDEFINED_INODE_ID) {
 		auto dirNode = NodeIndex[dirId];
 		if (dirNode == CurrentDir) {
@@ -172,7 +166,7 @@ void tFileManager::remove_dir(const std::vector<ci_string>& path)
 //dynamic links FME should keep them all unchanged.
 void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 {
-	auto dirId = get_dir_by_path(path, false);
+	auto dirId = get_node_by_path(path);
 	if (dirId == UNDEFINED_INODE_ID || dirId == CurrentDir-> Id)
 		return;
 	auto parentId = NodeIndex[dirId]->DataBlock->get_node_by_name ("..");
@@ -189,16 +183,17 @@ void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 			allInternalNodeIds.insert(node->Id);
 			if (node->Type == INode::INodeType::DIR) {
 				for (auto&& idNamePair : node->DataBlock->Refs) {
+					auto name = idNamePair.second;
+					if (name == "." || name == "..") {//skip parent and current refs
+						continue;
+					}
 					if (idNamePair.first == CurrentDir-> Id) {
 						return;//cannot remove dir with current dir in it
 					}
-					auto name = idNamePair.second;
-					if (name.find ("hlink") == std::string::npos) {
+					if (name.find ("hlink") != std::string::npos) {
 						return;//cant remove dir with hlink in it
 					}
-					if (name != "." || name != "..") {//skip parent and current refs
-						allInternalNodes.push(NodeIndex[idNamePair.first]);
-					}
+					allInternalNodes.push(NodeIndex[idNamePair.first]);
 				}
 			}
 		}
@@ -209,18 +204,6 @@ void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 
 		//remove from Nodes and from NodeIndex
 
-		/*auto removeFromNodeIndex = [this, &allInternalNodeIds](auto&& pair) {
-			auto node = pair.second;
-			if (node->Type != INode::INodeType::SOFTLINK) {
-				return allInternalNodeIds.find(pair.first->Id) != allInternalNodeIds.end;
-			}
-			else {
-				auto fileId = node->DataBlock.Refs.begin()-> first;//because softlink's datablock always had only 1 entry for file
-				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end;
-			}
-		};
-		NodeIndex.erase(std::remove_if(NodeIndex.begin(), NodeIndex.end(), removeFromNodeIndex), NodeIndex.end());*/
-
 		auto removeFromNodes = [this, &allInternalNodeIds](auto&& nodeRef) {
 			if (nodeRef.Type != INode::INodeType::SOFTLINK) {
 				return allInternalNodeIds.find(nodeRef.Id) != allInternalNodeIds.end();
@@ -230,7 +213,6 @@ void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end();
 			}
 		};
-		//Nodes.erase(std::remove_if(Nodes.begin(), Nodes.end(), removeFromNodes), Nodes.end());
 
 		for (auto it = Nodes.begin(); it != Nodes.end();) {
 			if (removeFromNodes(*it)) {
@@ -254,12 +236,12 @@ void tFileManager::create_hard_link(const std::vector<ci_string>& source, const 
 	if (has_extension(dest)) {
 		return;
 	}
-	auto dirToInsertIntoId = get_dir_by_path(dest, false);
+	auto dirToInsertIntoId = get_node_by_path(dest);
 	if (dirToInsertIntoId == UNDEFINED_INODE_ID) {
 		return;//not valid name of dest
 	}
-	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
-	if (sourceId != UNDEFINED_INODE_ID) {
+	auto sourceId = get_node_by_path(source);
+	if (sourceId == UNDEFINED_INODE_ID) {
 		return;//not valid name of source
 	}
 
@@ -285,12 +267,12 @@ void tFileManager::create_soft_link(const std::vector<ci_string>& source, const 
 	if (has_extension(dest)) {
 		return;
 	}
-	auto dirToInsertIntoId = get_dir_by_path(dest, false);
+	auto dirToInsertIntoId = get_node_by_path(dest);
 	if (dirToInsertIntoId == UNDEFINED_INODE_ID) {
 		return;//not valid name of dest
 	}
-	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
-	if (sourceId != UNDEFINED_INODE_ID) {
+	auto sourceId = get_node_by_path(source);
+	if (sourceId == UNDEFINED_INODE_ID) {
 		return;//not valid name of source
 	}
 
@@ -304,9 +286,11 @@ void tFileManager::create_soft_link(const std::vector<ci_string>& source, const 
 		return;//softlink already exists
 	}
 
+	auto sourceName = get_name(source);
 	++NodeIndex[sourceId]->SoftRefCount;
 	auto newNode = create_new_node(INode::INodeType::SOFTLINK);
-	newNode->DataBlock->Refs.insert(std::make_pair (sourceId,"dlink[" + get_name(source) + "]"));
+	newNode->DataBlock->Refs.insert(std::make_pair (sourceId, sourceName));
+	destNode->DataBlock->Refs.insert(std::make_pair(newNode->Id, "dlink[" + get_name(source) + "]"));
 }
 
 void tFileManager::remove_all_file_soft_links (unsigned fileId)
@@ -345,18 +329,23 @@ void tFileManager::remove_all_file_soft_links (unsigned fileId)
 //dynamic links FME should keep them all unchanged.
 void tFileManager::delete_file_or_link(const std::vector<ci_string>& path)
 {
-	auto fileId = get_file_by_path(path);
+	auto fileId = get_node_by_path(path);
 	if (fileId == UNDEFINED_INODE_ID) {
 		return;//no such file
 	}
-	auto fileNode = NodeIndex[fileId];
-	if (fileNode->HardRefCount > 0) {
-		return;//cannot delete file with hardlinks to it
+	auto fileNode = NodeIndex[fileId];//should be different for file / link!
+	if (fileNode->Type == INode::INodeType::FILE) {
+		if (fileNode->HardRefCount > 0) {
+			return;//cannot delete file with hardlinks to it
+		}
+		if (fileNode->SoftRefCount > 0) {
+			remove_all_file_soft_links(fileId);
+		}
+	} else if (fileNode-> Type == INode::INodeType::SOFTLINK) {
+		auto file = NodeIndex[fileNode->DataBlock->Refs.begin()->first];
+		--file->SoftRefCount;
 	}
-	if (fileNode->SoftRefCount > 0) {
-		remove_all_file_soft_links(fileId);
-	}
-	NodeIndex[get_dir_by_path(path, true)]-> DataBlock-> Refs.erase(fileId);//remove record from dir's Refs
+	NodeIndex[get_node_by_path(path, true)]-> DataBlock-> Refs.erase(fileId);//remove record from dir's Refs
 	NodeIndex.erase(fileId);//erase from index
 	Nodes.erase (std::find_if (Nodes.begin (),Nodes.end (),[fileId](auto&& node) {
 		return node.Id == fileId;
@@ -371,9 +360,9 @@ void tFileManager::delete_file_or_link(const std::vector<ci_string>& path)
 //	modified and contain new location information instead of the old one.
 void tFileManager::move(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto sourceId = has_extension(source) ? get_file_by_path (source) : get_dir_by_path (source, false);
-	auto sourceParentId = get_dir_by_path(source, true);
-	auto destId = get_dir_by_path(dest, false);
+	auto sourceId = get_node_by_path(source);
+	auto sourceParentId = get_node_by_path(source);
+	auto destId = get_node_by_path(dest);
 	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID) {
 		return;
 	}
@@ -389,9 +378,9 @@ void tFileManager::move(const std::vector<ci_string>& source, const std::vector<
 //	file name otherwise FME should raise error.
 void tFileManager::copy(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
-	auto sourceId = has_extension(source) ? get_file_by_path(source) : get_dir_by_path(source, false);
-	auto sourceParentId = get_dir_by_path(source, true);
-	auto destId = get_dir_by_path(dest, false);
+	auto sourceId = get_node_by_path(source);
+	auto sourceParentId = get_node_by_path(source);
+	auto destId = get_node_by_path(dest);
 	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID || destId == sourceId) {
 		return;
 	}

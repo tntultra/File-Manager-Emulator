@@ -9,24 +9,19 @@
 //model
 class tFileManager
 {
+	unsigned LastNodeIndex = 0;
 	std::list<INode> Nodes;//IList
 	//first INode in the list is reserved to Root folder.
 	INode* CurrentDir;
 	std::unordered_map<unsigned, INode*> NodeIndex;
-	unsigned LastNodeIndex = 0;
 
 	INode* create_new_node(INode::INodeType);
 	INode* node_by_id(unsigned id);
-	unsigned get_dir_by_path(const std::vector<ci_string>& path, bool parent);
-	//bool path_represents_current_dir(const std::vector<ci_string>& path);
-	unsigned get_file_by_path(const std::vector<ci_string>& path);
-	//bool dir_can_be_removed(unsigned dirId);
-	bool dir_has_hardlinks_to_files(INode* dirNode);
-	bool dir_contains_dir(unsigned dirId, unsigned containedDirId);
+	unsigned get_node_by_path(const std::vector<ci_string>& path, bool parent = false);
 	INode* copy_node(unsigned nodeId);
 
 public:
-	tFileManager() = default;
+	tFileManager();
 	tFileManager(const tFileManager&) = delete;
 	tFileManager(tFileManager&&) = default;
 	tFileManager& operator=(const tFileManager&) = delete;

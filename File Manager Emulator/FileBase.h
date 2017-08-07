@@ -13,7 +13,7 @@ extern const unsigned UNDEFINED_INODE_ID;
 struct DataBlock
 {
 	unsigned get_node_by_name(const ci_string& name);
-	ci_string get_name_by_id(unsigned id);
+	//ci_string get_name_by_id(unsigned id);
 
 	std::unordered_map<unsigned, ci_string> Refs;
 	//std::unordered_map<ci_string, unsigned> StringRefs;

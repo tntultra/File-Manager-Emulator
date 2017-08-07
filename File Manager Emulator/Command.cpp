@@ -34,7 +34,13 @@ void tCommand :: split_path(tPath* parsedPath, const ci_string& text)
 		begin = slash_pos + 1;
 	} while (slash_pos != ci_string::npos);
 	if (firstSqBracket != ci_string::npos) {
-		auto name = parsedPath->Path.back();
-		name = name.substr(0, name.rfind(']'));
+		auto&& name = parsedPath->Path.back();
+		if (parsedPath->IsHardLink) {
+			name = "hlink[" + name;
+		} else if (parsedPath->IsSoftLink) {
+			name = "dlink[" + name;
+		}	else {
+			name = name.substr(0, name.rfind(']'));
+		}
 	}
 }
