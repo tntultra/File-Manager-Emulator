@@ -363,7 +363,7 @@ void tFileManager::delete_file_or_link(const std::vector<ci_string>& path)
 void tFileManager::move(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto sourceId = get_node_by_path(source);
-	auto sourceParentId = get_node_by_path(source);
+	auto sourceParentId = get_node_by_path(source, true);
 	auto destId = get_node_by_path(dest);
 	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID) {
 		return;
@@ -381,7 +381,7 @@ void tFileManager::move(const std::vector<ci_string>& source, const std::vector<
 void tFileManager::copy(const std::vector<ci_string>& source, const std::vector<ci_string>& dest)
 {
 	auto sourceId = get_node_by_path(source);
-	auto sourceParentId = get_node_by_path(source);
+	auto sourceParentId = get_node_by_path(source, true);
 	auto destId = get_node_by_path(dest);
 	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID || destId == sourceId) {
 		return;
