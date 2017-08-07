@@ -209,8 +209,10 @@ void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 				return allInternalNodeIds.find(nodeRef.Id) != allInternalNodeIds.end();
 			}
 			else {
+				//remove softlink if it's file is to be removed, or actual link is to be removed!
 				auto fileId = nodeRef.DataBlock->Refs.begin()->first;//because softlink's datablock always had only 1 entry for file
-				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end();
+				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end() ||
+					allInternalNodeIds.find(nodeRef.Id) != allInternalNodeIds.end();
 			}
 		};
 
