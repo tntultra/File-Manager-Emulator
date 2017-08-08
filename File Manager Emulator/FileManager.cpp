@@ -211,8 +211,12 @@ void tFileManager::recursive_remove_dir(const std::vector<ci_string>& path)
 			else {
 				//remove softlink if it's file is to be removed, or actual link is to be removed!
 				auto fileId = nodeRef.DataBlock->Refs.begin()->first;//because softlink's datablock always had only 1 entry for file
-				return allInternalNodeIds.find(fileId) != allInternalNodeIds.end() ||
-					allInternalNodeIds.find(nodeRef.Id) != allInternalNodeIds.end();
+				bool removeFile = allInternalNodeIds.find(fileId) != allInternalNodeIds.end();
+				bool removeLink = allInternalNodeIds.find(nodeRef.Id) != allInternalNodeIds.end();
+				if (removeLink && !removeFile) {//if only link is to removed - decrease soft count in file. if both - just remove, because it doesnt matter anymore
+					--NodeIndex[fileId]->SoftRefCount;
+				}
+				return removeFile || removeLink;
 			}
 		};
 
@@ -368,10 +372,18 @@ void tFileManager::move(const std::vector<ci_string>& source, const std::vector<
 	if (sourceId == UNDEFINED_INODE_ID || sourceParentId == UNDEFINED_INODE_ID || destId == UNDEFINED_INODE_ID) {
 		return;
 	}
+	auto sourceNode = NodeIndex[sourceId];
+	//erase from previous parent
 	auto idNamePairIt = NodeIndex[sourceParentId]->DataBlock->Refs.find(sourceId);
 	auto fileName = idNamePairIt->second;
 	NodeIndex[sourceParentId]->DataBlock->Refs.erase(idNamePairIt);
+	//add to dest dir
 	NodeIndex[destId]->DataBlock->Refs[sourceId] = fileName;
+	if (sourceNode-> Type == INode::INodeType::DIR) {//change source's parent to dest
+		auto sourcePreviousParentId = sourceNode->DataBlock->get_node_by_name("..");
+		sourceNode->DataBlock->Refs.erase(sourcePreviousParentId);
+		sourceNode->DataBlock->Refs[destId] = "..";
+	}
 }
 
 //COPY – copy an existed directory / file / link to another location.
@@ -394,6 +406,10 @@ void tFileManager::copy(const std::vector<ci_string>& source, const std::vector<
 	}
 	auto newNode = copy_node(sourceId);
 	NodeIndex[destId]->DataBlock->Refs.insert(std::make_pair(newNode->Id, NodeIndex[sourceParentId]->DataBlock->Refs[sourceId]));
+	auto sourceNode = NodeIndex[sourceId];
+	if (sourceNode->Type == INode::INodeType::DIR) {//add dest as newNode's parent
+		newNode->DataBlock->Refs[destId] = "..";
+	}
 }
 
 ci_string get_name(const std::vector<ci_string>& path)
